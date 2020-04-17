@@ -1,66 +1,69 @@
-#include <map>
-#include <set>
-#include <list>
-#include <cmath>
-#include <ctime>
-#include <deque>
-#include <queue>
-#include <stack>
-#include <string>
-#include <bitset>
-#include <cstdio>
-#include <limits>
-#include <vector>
-#include <climits>
-#include <cstring>
-#include <cstdlib>
-#include <fstream>
-#include <numeric>
-#include <sstream>
+#include "mapreduce.hpp"
+#include <boost/algorithm/string.hpp>
 #include <iostream>
-#include <algorithm>
-#include <unordered_map>
-#include <mpi.h>
-#include <chrono>
-
+#include <boost/config.hpp>
 //using namespace std;
 
-namespace wordcount {
+namespace pagerank {
 
 class map_task;
 class reduce_task;
 
-typedef mapreduce::job<wordcount::map_task,wordcount::reduce_task> job;
+typedef mapreduce::job<pagerank::map_task,pagerank::reduce_task> job;
 
 class map_task : boost::noncopyable
 {
   public:
-    typedef std::string   key_type;
-    typedef std::ifstream value_type;
-    typedef std::string   intermediate_key_type;
-    typedef unsigned      intermediate_value_type;
+    // typedef std::string   key_type;
+    // typedef std::ifstream value_type;
+    // typedef std::string   intermediate_key_type;
+    // typedef unsigned      intermediate_value_type;
 
     map_task(job::map_task_runner &runner) : runner_(runner)
     {
     }
+    void map(job::map_task_runner &runner) 
+    {
+        string line = runner.getInputValue();
+
+        vector< string > params =
+        HadoopUtils::splitString( line, "\t " );
+        string user = params[0];
+
+        double rank = HadoopUtils::toFloat(params[1]);
+
+        if ( params[2] != string("-") ) 
+        {
+            vector< string > followings = HadoopUtils::splitString( params[2], "," );
+            double P = rank / followings.size();
+            for (unsigned i = 0; i < followings.size(); ++i) 
+            if ( followings[i].length() > 0 ) 
+            {
+                runner.emit( followings[i], doubleToString(P) );
+            }
+        }
+
+        runner.emit( user, params[1] + " " + params[2] );
+    } 
 
     // 'value_type' is not a reference to const to enable streams to be passed
     //    key: input filename
     //    value: ifstream of the open file
-    void operator()(key_type const &/*key*/, value_type &value)
-    {
-        while (!value.eof())
-        {
-            std::string word;
-            value >> word;
-            std::transform(word.begin(), word.end(), word.begin(),
-                           std::bind1st(
-                               std::mem_fun(&std::ctype<char>::tolower),
-                               &std::use_facet<std::ctype<char> >(std::locale::classic())));
 
-            runner_.emit_intermediate(word, 1);
-        }
-    }
+    // void operator()(key_type const &/*key*/, value_type &value)
+    // {
+    //     while (!value.eof())
+    //     {
+    //         std::string word;
+    //         value >> word;
+    //         std::transform(word.begin(), word.end(), word.begin(),
+    //                        std::bind1st(
+    //                            std::mem_fun(&std::ctype<char>::tolower),
+    //                            &std::use_facet<std::ctype<char> >(std::locale::classic())));
+
+    //         runner_.emit_intermediate(word, 1);
+    //     }
+    // }
 
   private:
     job::map_task_runner &runner_;
@@ -69,36 +72,61 @@ class map_task : boost::noncopyable
 class reduce_task : boost::noncopyable
 {
   public:
-    typedef std::string  key_type;
-    typedef size_t       value_type;
+    // typedef std::string  key_type;
+    // typedef size_t       value_type;
 
     reduce_task(job::reduce_task_runner &runner) : runner_(runner)
     {
     }
 
-    template<typename It>
-    void operator()(typename map_task::intermediate_key_type const &key, It it, It ite)
+    void reduce( HadoopPipes::ReduceContext& context ) 
     {
-        reduce_task::value_type result = 0;
-        for (; it!=ite; ++it)
-           result += *it;
-        runner_.emit(key, result);
+        float s=0.85
+        double rank = 0.0;
+        string followings;
+
+        while ( context.nextValue() ) 
+        {
+            vector< string > line = HadoopUtils::splitString( context.getInputValue(), " " );
+
+            if ( line.size() == 1 ) 
+            {
+                rank += HadoopUtils::toFloat(line[0]);
+            } 
+            else 
+            {
+                followings = line[1];
+            }
+        }
+
+        rank = s * rank + 1 - s;
+        context.emit(context.getInputKey(), doubleToString(rank) + " " + followings );
     }
+
+    // template<typename It>
+    // void operator()(typename map_task::intermediate_key_type const &key, It it, It ite)
+    // {
+    //     reduce_task::value_type result = 0;
+    //     for (; it!=ite; ++it)
+    //        result += *it;
+    //     runner_.emit(key, result);
+    // }
 
   private:
     job::reduce_task_runner &runner_;
 };
 
-}   // namespace wordcount
+}   // namespace pagerank
+
 
 int main(int argc, char **argv)
 {
-    wordcount::job::datasource_type datasource;
+    pagerank::job::datasource_type datasource;
     datasource.set_directory(argv[1]);
 
     mapreduce::specification  spec;
     mapreduce::results        result;
-    wordcount::job            mr(datasource);
+    pagerank::job            mr(datasource);
     mr.run<mapreduce::schedule_policy::cpu_parallel>(spec, result);
 
     // output the results
