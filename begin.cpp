@@ -27,10 +27,23 @@ unsigned const friends[8][8] = { { 0, 1, 0, 1, 1, 0, 0, 0 },
                                  { 0, 0, 0, 0, 0, 0, 0, 0 } };
 char const * const names[] = { "Steve", "Anne", "Michael", "Brett", "Diane", "Sue", "Ruby", "Jack" };
 unsigned **page_rank;
+double *probablity;
 unsigned long size_graph;
 bool const is_friend(unsigned const person1, unsigned const person2)
 {
     return person1 != person2  &&  (friends[person1][person2]  ||  friends[person2][person1]);
+}
+bool const is_outgoing(unsigned const page1, unsigned const page2)
+{
+    return (page_rank[page1][page2])==1;
+}
+unsigned long const outgoing(unsigned const page1)
+{
+    unsigned long sum=0;
+    for(unsigned long i=0;i<size_graph;++i){
+        sum=sum+page_rank[page1][i];
+    }
+    return sum;
 }
 void print_graph(){
     for(unsigned long i=0;i<size_graph;++i){
@@ -47,23 +60,29 @@ class datasource : mapreduce::detail::noncopyable
     datasource() : sequence_(0)
     {
     }
+    datasource(unsigned long size): sequence_(0){
+        len=size;
+    }
 
     bool const setup_key(typename MapTask::key_type &key)
     {
         key = sequence_++;
-        return key < 8;
+        return key < len;
     }
 
     bool const get_data(typename MapTask::key_type const &key, typename MapTask::value_type &value)
     {
-        for (unsigned loop=0; loop<8; ++loop)
-            if (is_friend(key,loop))
+        value.push_back(probablity[key]);
+        value.push_back(outgoing(key));
+        for (unsigned loop=0; loop<len; ++loop)
+            if (is_outgoing(key,loop))
                 value.push_back(loop);
         return true;
     }
 
   private:
     unsigned sequence_;
+    unsigned long len;
 };
 
 struct map_task : public mapreduce::map_task<unsigned, std::vector<unsigned> >
@@ -150,7 +169,7 @@ int main(int argc, char *argv[])
     else
         spec.reduce_tasks = std::max(1U, std::thread::hardware_concurrency());
 
-    friend_graph::job::datasource_type datasource;
+    
 
     std::cout <<"\nPage Rank analysis MapReduce..." <<std::endl;
     std::string filename="test/walther.txt";
@@ -187,6 +206,7 @@ int main(int argc, char *argv[])
         friend_graph::page_rank[x.first][x.second]=1;
     }
     friend_graph::print_graph();
+    friend_graph::job::datasource_type datasource(size);
     return 0;
     
 
