@@ -180,7 +180,7 @@ int main(int argc, char *argv[])
         std::cout << "Unable to open file";
         exit(1); // terminate with error
     }
-    std::cout <<"\nHere" <<std::endl;
+    // std::cout <<"\nHere" <<std::endl;
     unsigned long a, b;
     unsigned long max=0; 
     while(inFile>>a>>b){
@@ -191,7 +191,7 @@ int main(int argc, char *argv[])
             max=temp;
         }
     }
-    std::cout <<"\nggg Here with max " <<max<<std::endl;
+    // std::cout <<"\nggg Here with max " <<max<<std::endl;
     unsigned long size=max;
     friend_graph::size_graph=size;
     friend_graph::page_rank= new unsigned*[size];
