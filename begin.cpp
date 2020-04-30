@@ -72,7 +72,7 @@ class datasource : mapreduce::detail::noncopyable
 
     bool const get_data(typename MapTask::key_type const &key, typename MapTask::value_type &value)
     {
-        value.push_back(probablity[key]);
+        value.push_back(probablity[key]); //p_j
         value.push_back(outgoing(key));
         for (unsigned loop=0; loop<len; ++loop)
             if (is_outgoing(key,loop))
@@ -202,9 +202,16 @@ int main(int argc, char *argv[])
             friend_graph::page_rank[i][j]=0;
         }
     }
+    //page rank initialisation
     for(auto x:page_coordinates){
         friend_graph::page_rank[x.first][x.second]=1;
     }
+    friend_graph::probablity = new double[size];
+    //probability initailisation
+    for(unsigned i =0;i<size;++i){
+        friend_graph::probablity[i] = (double)1/size;
+    }
+    //print the page rank graph
     friend_graph::print_graph();
     friend_graph::job::datasource_type datasource(size);
     friend_graph::job job(datasource, spec);
