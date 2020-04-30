@@ -13,7 +13,7 @@
 #   endif
 #endif
 
-#include "../../include/mapreduce.hpp"
+#include "mapreduce.hpp"
 
 namespace friend_graph {
 
