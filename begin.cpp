@@ -207,6 +207,7 @@ int main(int argc, char *argv[])
     }
     friend_graph::print_graph();
     friend_graph::job::datasource_type datasource(size);
+    friend_graph::job job(datasource, spec);
     return 0;
     
 
