@@ -11,6 +11,7 @@ using namespace MAPREDUCE_NS;
 vector<vector<int>> outedges;
 vector<vector<double>> temppageranks;
 vector<double> pageranks;
+vector<double> dp_arr
 int num_pages=10000;
 
 // void fileread(int, char *, KeyValue *, void *);
@@ -37,6 +38,15 @@ void mapper(int key, double pgrank)
         {
             kv->add(outgoing_links[key][i],sizeof(int),(pgrank/n),sizeof(double));
         }
+    }
+}
+
+void mapper1(int key, double pgrank)
+{
+    int n = outedges[key].size();
+    if(n==0)
+    {
+        dp_arr.push_back(pgrank);
     }
 }
 
@@ -91,6 +101,21 @@ int main(int narg, char **args)
     while(true)
     {
         MPI_Barrier(MPI_COMM_WORLD);
+
+        for(i=0; i<num_webpages; i++)
+        {
+            structformapper sfm;
+            sfm.key=i;
+            sfm.pgrank=pageranks[i]
+            int nwords = mr->map(nprocs,mapper1,&sfm);
+        }
+
+        double dp=0.0;
+        for(i=0; i<dp_arr.size(); i++)
+        {
+            dp = dp+ (dp_arr[i]/num_pages);
+        }
+
         for(i=0; i<num_webpages; i++)
         {
             structformapper sfm;
@@ -103,13 +128,13 @@ int main(int narg, char **args)
         {
             structforreducer sfr;
             sfr.key=i;
-            sfr.pgranks=pageranks; //change
+            sfr.pgranks=pageranks; //change - how do we get the intermediate 2D array?????
             int nunique = mr->reduce(reducer,&sfr);
         }
         mr->gather(0);
         for(int i=0; i<num_webpages; i++)
         {
-            pageranks[i] = s*pageranks_up[i] +  (double)(1-s)/num_webpages; //+s*dp
+            pageranks[i] = s*pageranks_up[i] +  (1-s)/num_webpages + s*dp ;
         }
         if(iter>20)
             break;
