@@ -12,7 +12,7 @@
 #       define _HAS_ITERATOR_DEBUGGING 0
 #   endif
 #endif
-
+#include <string>
 #include "mapreduce.hpp"
 
 namespace friend_graph {
@@ -165,10 +165,10 @@ int main(int argc, char *argv[])
 {
     mapreduce::specification spec;
 
-    if (argc > 1)
+    if (argc > 3)
         spec.map_tasks = std::max(1, atoi(argv[1]));
 
-    if (argc > 2)
+    if (argc > 4)
         spec.reduce_tasks = atoi(argv[2]);
     else
         spec.reduce_tasks = std::max(1U, std::thread::hardware_concurrency());
@@ -176,7 +176,10 @@ int main(int argc, char *argv[])
     
 
     std::cout <<"\nPage Rank analysis MapReduce..." <<std::endl;
-    std::string filename="test/walther.txt";
+    std::string filename="test/mytest.txt";
+    if(argc>1){
+        filename=argv[1];
+    }
     std::ifstream inFile;
     inFile.open(filename);
     std::vector<std::pair<int, int> > page_coordinates;
@@ -220,7 +223,12 @@ int main(int argc, char *argv[])
     friend_graph::print_graph();
     int num_iterations=0;
     friend_graph::calc_outedges();
-    while(num_iterations<2){
+    
+    int max_iterations=20;
+    if(argc>2){
+        max_iterations=atoi(argv[2]);
+    }
+    while(num_iterations<max_iterations){
         friend_graph::job::datasource_type datasource(size);
         friend_graph::job job(datasource, spec);
         
