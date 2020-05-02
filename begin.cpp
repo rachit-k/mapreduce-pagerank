@@ -84,6 +84,41 @@ class datasource : mapreduce::detail::noncopyable
     unsigned sequence_;
     unsigned long len;
 };
+  
+// vector<vector<int>> outedges;
+// vector<double> page_rank;
+// float prod_dp=0.0;
+
+// struct map_task : public mapreduce::map_task<unsigned, std::vector<unsigned> >
+// {
+//     template<typename Runtime>
+//     void operator()(Runtime &runtime, key_type const &key, value_type const &value) const
+//     {
+//         int n = outedges[key].size();
+//         //calc prod_dp   
+//         for (int i=0;i<sizes;i++)
+//         {
+//             typename Runtime::reduce_task_type::key_type const emit_key = outedges[key][i];
+//             double temp = value/n;
+//             runtime.emit_intermediate(emit_key, temp);
+//         }
+//     }
+// };
+
+// struct reduce_task : public mapreduce::reduce_task<std::pair<unsigned, unsigned>, std::vector<unsigned> >
+// {
+//     template<typename Runtime, typename It>
+//     void operator()(Runtime &runtime, key_type const &key, It it, It ite) const
+//     {
+//         value_type results(*it);
+//         for (It it1=it; it1!=ite; ++it1)
+//         {
+//             results = results+ (*it1);
+//         }
+
+//         runtime.emit(key, results);        
+//     }
+// };  
 
 struct map_task : public mapreduce::map_task<unsigned, std::vector<unsigned> >
 {
