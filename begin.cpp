@@ -28,6 +28,8 @@ unsigned const friends[8][8] = { { 0, 1, 0, 1, 1, 0, 0, 0 },
 char const * const names[] = { "Steve", "Anne", "Michael", "Brett", "Diane", "Sue", "Ruby", "Jack" };
 unsigned **page_rank;
 double *probablity;
+std::vector<std:: vector<unsigned> > outedges;
+std::vector<double> pr;
 unsigned long size_graph;
 bool const is_friend(unsigned const person1, unsigned const person2)
 {
@@ -53,6 +55,21 @@ void print_graph(){
         std::cout<<std::endl;
     }
 }
+void calc_outedges()
+{
+     for(unsigned long i=0;i<size_graph;++i){
+        std::vector<unsigned> vec;
+        for(unsigned long j=0;j<size_graph;++j){
+            if(page_rank[i][j]>0){
+                vec.push_back(j);
+            }
+        }
+        if(vec.size()==0){
+            vec.push_back(-1);
+        }
+        outedges.push_back(vec);
+    }
+}
 template<typename MapTask>
 class datasource : mapreduce::detail::noncopyable
 {
@@ -72,11 +89,7 @@ class datasource : mapreduce::detail::noncopyable
 
     bool const get_data(typename MapTask::key_type const &key, typename MapTask::value_type &value)
     {
-        value.push_back(probablity[key]); //p_j
-        value.push_back(outgoing(key));
-        for (unsigned loop=0; loop<len; ++loop)
-            if (is_outgoing(key,loop))
-                value.push_back(loop);
+        value=probablity[key];
         return true;
     }
 
@@ -85,59 +98,22 @@ class datasource : mapreduce::detail::noncopyable
     unsigned long len;
 };
   
-// vector<vector<int>> outedges;
-// vector<double> page_rank;
-// float prod_dp=0.0;
 
-// struct map_task : public mapreduce::map_task<unsigned, std::vector<unsigned> >
-// {
-//     template<typename Runtime>
-//     void operator()(Runtime &runtime, key_type const &key, value_type const &value) const
-//     {
-//         int n = outedges[key].size();
-//         //calc prod_dp   
-//         for (int i=0;i<sizes;i++)
-//         {
-//             typename Runtime::reduce_task_type::key_type const emit_key = outedges[key][i];
-//             double temp = value/n;
-//             runtime.emit_intermediate(emit_key, temp);
-//         }
-//     }
-// };
+float prod_dp=0.0;
 
-// struct reduce_task : public mapreduce::reduce_task<std::pair<unsigned, unsigned>, std::vector<unsigned> >
-// {
-//     template<typename Runtime, typename It>
-//     void operator()(Runtime &runtime, key_type const &key, It it, It ite) const
-//     {
-//         value_type results(*it);
-//         for (It it1=it; it1!=ite; ++it1)
-//         {
-//             results = results+ (*it1);
-//         }
-
-//         runtime.emit(key, results);        
-//     }
-// };  
-
-struct map_task : public mapreduce::map_task<unsigned, std::vector<unsigned> >
+struct map_task : public mapreduce::map_task<unsigned, double >
 {
     template<typename Runtime>
     void operator()(Runtime &runtime, key_type const &key, value_type const &value) const
     {
-        std::cout << "\n\n" << names[key] << "\n";
-
-        for (auto const &v1 : value)
+        int n = outedges[key].size();
+        //calc prod_dp   
+        for (int i=0;i<n;i++)
         {
-            typename Runtime::reduce_task_type::key_type const emit_key = std::make_pair(std::min(key, v1), std::max(key, v1));
-
-            std::cout << "    {" << names[emit_key.first] << ", " << names[emit_key.second] << "}";
-            std::cout << " -> [";
-            for (auto const &v2 : value)
-                std::cout << " " << names[v2];
-            std::cout << " ]\n";
-
-            runtime.emit_intermediate(emit_key, value);
+            typename Runtime::reduce_task_type::key_type const emit_key = outedges[key][i];
+            double temp=value/n;
+            // temp = value/n; what to do here?
+            runtime.emit_intermediate(emit_key, temp);
         }
     }
 };
@@ -147,41 +123,79 @@ struct reduce_task : public mapreduce::reduce_task<std::pair<unsigned, unsigned>
     template<typename Runtime, typename It>
     void operator()(Runtime &runtime, key_type const &key, It it, It ite) const
     {
-        if (it == ite)
-            return;
-        else if (std::distance(it,ite) == 1)
-        {
-            runtime.emit(key, *it);
-            return;
-        }
-
-        // calculate the itersection of all of the vectors in (it .. ite]
-        // i.e. values that are in all the vectors
         value_type results(*it);
-        for (It it1=++it; it1!=ite; ++it1)
+        for (It it1=it; it1!=ite; ++it1)
         {
-            std::vector<unsigned> working_set;
-            std::swap(working_set, results);
-            std::set_intersection(
-                working_set.cbegin(),
-                working_set.cend(),
-                it1->begin(),
-                it1->end(),
-                std::back_inserter(results));
+            results = results+ (*it1);
+            
         }
-
-        // don't emit empty results
-        if (results.size())
-        {
-            std::cout << "\n{ " << names[key.first] << ", " << names[key.second] << "} -> [ ";
-            for (auto uid=results.cbegin(); uid!=results.cend(); ++uid)
-                std::cout << names[*uid] << " ";
-            std::cout << "]";
-
-            runtime.emit(key, results);
-        }
+        runtime.emit(key, 0.0);
+        runtime.emit(key, results);        
     }
-};
+};  
+
+// struct map_task : public mapreduce::map_task<unsigned, std::vector<unsigned> >
+// {
+//     template<typename Runtime>
+//     void operator()(Runtime &runtime, key_type const &key, value_type const &value) const
+//     {
+//         std::cout << "\n\n" << names[key] << "\n";
+
+//         for (auto const &v1 : value)
+//         {
+//             typename Runtime::reduce_task_type::key_type const emit_key = std::make_pair(std::min(key, v1), std::max(key, v1));
+
+//             std::cout << "    {" << names[emit_key.first] << ", " << names[emit_key.second] << "}";
+//             std::cout << " -> [";
+//             for (auto const &v2 : value)
+//                 std::cout << " " << names[v2];
+//             std::cout << " ]\n";
+
+//             runtime.emit_intermediate(emit_key, value);
+//         }
+//     }
+// };
+
+// struct reduce_task : public mapreduce::reduce_task<std::pair<unsigned, unsigned>, std::vector<unsigned> >
+// {
+//     template<typename Runtime, typename It>
+//     void operator()(Runtime &runtime, key_type const &key, It it, It ite) const
+//     {
+//         if (it == ite)
+//             return;
+//         else if (std::distance(it,ite) == 1)
+//         {
+//             runtime.emit(key, *it);
+//             return;
+//         }
+
+//         // calculate the itersection of all of the vectors in (it .. ite]
+//         // i.e. values that are in all the vectors
+//         value_type results(*it);
+//         for (It it1=++it; it1!=ite; ++it1)
+//         {
+//             std::vector<unsigned> working_set;
+//             std::swap(working_set, results);
+//             std::set_intersection(
+//                 working_set.cbegin(),
+//                 working_set.cend(),
+//                 it1->begin(),
+//                 it1->end(),
+//                 std::back_inserter(results));
+//         }
+
+//         // don't emit empty results
+//         if (results.size())
+//         {
+//             std::cout << "\n{ " << names[key.first] << ", " << names[key.second] << "} -> [ ";
+//             for (auto uid=results.cbegin(); uid!=results.cend(); ++uid)
+//                 std::cout << names[*uid] << " ";
+//             std::cout << "]";
+
+//             runtime.emit(key, results);
+//         }
+//     }
+// };
 
 typedef
 mapreduce::job<friend_graph::map_task,
@@ -250,6 +264,13 @@ int main(int argc, char *argv[])
     friend_graph::print_graph();
     friend_graph::job::datasource_type datasource(size);
     friend_graph::job job(datasource, spec);
+    friend_graph::calc_outedges();
+    mapreduce::results result;
+    #ifdef _DEBUG
+        job.run<mapreduce::schedule_policy::sequential<friend_graph::job> >(result);
+    #else
+        job.run<mapreduce::schedule_policy::cpu_parallel<friend_graph::job> >(result);
+    #endif
     return 0;
     
 
