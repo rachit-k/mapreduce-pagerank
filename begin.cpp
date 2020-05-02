@@ -55,6 +55,12 @@ void print_graph(){
         std::cout<<std::endl;
     }
 }
+void print_prob(){
+    for(unsigned long i=0;i<size_graph;++i){
+        std::cout<<probablity[i]<<std::endl;
+    }
+
+}
 void calc_outedges()
 {
      for(unsigned long i=0;i<size_graph;++i){
@@ -84,12 +90,13 @@ class datasource : mapreduce::detail::noncopyable
     bool const setup_key(typename MapTask::key_type &key)
     {
         key = sequence_++;
-        return key < len;
+        return key<len;
     }
 
     bool const get_data(typename MapTask::key_type const &key, typename MapTask::value_type &value)
     {
         value=probablity[key];
+        //std::cout<<"Len is "<<len<<std::endl;
         return true;
     }
 
@@ -108,94 +115,42 @@ struct map_task : public mapreduce::map_task<unsigned, double >
     {
         int n = outedges[key].size();
         //calc prod_dp   
+        // /std::cout<<"Value is"<<value<<std::endl;
         for (int i=0;i<n;i++)
         {
             typename Runtime::reduce_task_type::key_type const emit_key = outedges[key][i];
             double temp=value/n;
             // temp = value/n; what to do here?
+            //std::cout<<"Emitting for key "<<key<<std::endl;
+            if(emit_key==24){
+                //std::cout<<"value emitted is "<<temp<<std::endl;
+            }
             runtime.emit_intermediate(emit_key, temp);
+            
         }
+        runtime.emit_intermediate(key, 0.0);
     }
 };
 
-struct reduce_task : public mapreduce::reduce_task<std::pair<unsigned, unsigned>, std::vector<unsigned> >
+struct reduce_task : public mapreduce::reduce_task<unsigned, double >
 {
     template<typename Runtime, typename It>
     void operator()(Runtime &runtime, key_type const &key, It it, It ite) const
     {
-        value_type results(*it);
+        if(key>size_graph){
+            return;
+        }
+        value_type results=0.0;
+        
         for (It it1=it; it1!=ite; ++it1)
         {
             results = results+ (*it1);
             
         }
-        runtime.emit(key, 0.0);
+        
         runtime.emit(key, results);        
     }
 };  
-
-// struct map_task : public mapreduce::map_task<unsigned, std::vector<unsigned> >
-// {
-//     template<typename Runtime>
-//     void operator()(Runtime &runtime, key_type const &key, value_type const &value) const
-//     {
-//         std::cout << "\n\n" << names[key] << "\n";
-
-//         for (auto const &v1 : value)
-//         {
-//             typename Runtime::reduce_task_type::key_type const emit_key = std::make_pair(std::min(key, v1), std::max(key, v1));
-
-//             std::cout << "    {" << names[emit_key.first] << ", " << names[emit_key.second] << "}";
-//             std::cout << " -> [";
-//             for (auto const &v2 : value)
-//                 std::cout << " " << names[v2];
-//             std::cout << " ]\n";
-
-//             runtime.emit_intermediate(emit_key, value);
-//         }
-//     }
-// };
-
-// struct reduce_task : public mapreduce::reduce_task<std::pair<unsigned, unsigned>, std::vector<unsigned> >
-// {
-//     template<typename Runtime, typename It>
-//     void operator()(Runtime &runtime, key_type const &key, It it, It ite) const
-//     {
-//         if (it == ite)
-//             return;
-//         else if (std::distance(it,ite) == 1)
-//         {
-//             runtime.emit(key, *it);
-//             return;
-//         }
-
-//         // calculate the itersection of all of the vectors in (it .. ite]
-//         // i.e. values that are in all the vectors
-//         value_type results(*it);
-//         for (It it1=++it; it1!=ite; ++it1)
-//         {
-//             std::vector<unsigned> working_set;
-//             std::swap(working_set, results);
-//             std::set_intersection(
-//                 working_set.cbegin(),
-//                 working_set.cend(),
-//                 it1->begin(),
-//                 it1->end(),
-//                 std::back_inserter(results));
-//         }
-
-//         // don't emit empty results
-//         if (results.size())
-//         {
-//             std::cout << "\n{ " << names[key.first] << ", " << names[key.second] << "} -> [ ";
-//             for (auto uid=results.cbegin(); uid!=results.cend(); ++uid)
-//                 std::cout << names[*uid] << " ";
-//             std::cout << "]";
-
-//             runtime.emit(key, results);
-//         }
-//     }
-// };
 
 typedef
 mapreduce::job<friend_graph::map_task,
@@ -241,7 +196,7 @@ int main(int argc, char *argv[])
         }
     }
     // std::cout <<"\nggg Here with max " <<max<<std::endl;
-    unsigned long size=max;
+    unsigned long size=max+1;
     friend_graph::size_graph=size;
     friend_graph::page_rank= new unsigned*[size];
     for(unsigned i = 0; i < size; ++i)
@@ -259,54 +214,31 @@ int main(int argc, char *argv[])
     //probability initailisation
     for(unsigned i =0;i<size;++i){
         friend_graph::probablity[i] = (double)1/size;
+
     }
     //print the page rank graph
     friend_graph::print_graph();
-    friend_graph::job::datasource_type datasource(size);
-    friend_graph::job job(datasource, spec);
+    int num_iterations=0;
     friend_graph::calc_outedges();
-    mapreduce::results result;
-    #ifdef _DEBUG
-        job.run<mapreduce::schedule_policy::sequential<friend_graph::job> >(result);
-    #else
-        job.run<mapreduce::schedule_policy::cpu_parallel<friend_graph::job> >(result);
-    #endif
-    return 0;
-    
+    while(num_iterations<2){
+        friend_graph::job::datasource_type datasource(size);
+        friend_graph::job job(datasource, spec);
+        
+        mapreduce::results result;
+        #ifdef _DEBUG
+            job.run<mapreduce::schedule_policy::sequential<friend_graph::job> >(result);
+        #else
+            job.run<mapreduce::schedule_policy::cpu_parallel<friend_graph::job> >(result);
+        #endif
 
-    /*
-    for (unsigned loop=0; loop<sizeof(friend_graph::names)/sizeof(friend_graph::names[0]); ++loop)
-    {
-        std::cout << loop << " " << friend_graph::names[loop] << " is friends with";
-        for (unsigned friend_ndx=0; friend_ndx<sizeof(friend_graph::names)/sizeof(friend_graph::names[0]); ++friend_ndx)
+        for (auto it=job.begin_results(); it!=job.end_results(); ++it)
         {
-            if (friend_graph::is_friend(loop,friend_ndx))
-                std::cout << " " << friend_graph::names[friend_ndx];
+            friend_graph::probablity[it->first]=it->second;
         }
-        std::cout << "\n";
+        std::cout<<"After "<<num_iterations+1<<" number of iterations "<<std::endl;
+        friend_graph::print_prob();
+        num_iterations++;
     }
-
-    friend_graph::job job(datasource, spec);
-    mapreduce::results result;
-#ifdef _DEBUG
-    job.run<mapreduce::schedule_policy::sequential<friend_graph::job> >(result);
-#else
-    job.run<mapreduce::schedule_policy::cpu_parallel<friend_graph::job> >(result);
-#endif
-    std::cout <<"\nMapReduce finished in " << result.job_runtime.count() << "s with " << std::distance(job.begin_results(), job.end_results()) << " results\n\n";
-
-    for (auto it=job.begin_results(); it!=job.end_results(); ++it)
-    {
-        std::cout << friend_graph::names[it->first.first]
-                  << " and "
-                  << friend_graph::names[it->first.second]
-                  << " are both friends with: ";
-
-        for (unsigned const value : it->second)
-            std::cout << friend_graph::names[value] << " ";
-        std::cout << "\n";
-    }
-    */
     return 0;
 }
 
