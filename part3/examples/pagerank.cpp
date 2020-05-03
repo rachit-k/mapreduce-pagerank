@@ -9,11 +9,11 @@
 
 using namespace MAPREDUCE_NS;
 
-vector<vector<int>> outedges(100000);
-vector<vector<double>> temppageranks(100000);
-vector<double> pageranks(100000, 0.0f);
+vector<vector<int>> outedges(10000);
+vector<vector<double>> temppageranks(10000);
+vector<double> pageranks(10000, 0.0f);
 vector<double> dp_arr;
-int num_pages=10000;
+int num_pages=0;
 
 // void fileread(int, char *, KeyValue *, void *);
 
@@ -77,24 +77,26 @@ int main(int narg, char **args)
     {
         fin>>a>>b;
         outedges[a].push_back(b);
+        num_pages = max(num_pages,max(a,b));
     }
+    num_pages++;
     fin.close();
 
-    double def_pagerank=1/numpages;
+    double def_pagerank=1/num_pages;
 
     for(int i=0;i<num_pages;i++)
     {
-        pageranks.pushback(def_pagerank);
+        pageranks.push_back(def_pagerank);
     }
 
     MPI_Comm_rank(MPI_COMM_WORLD,&me);
     MPI_Comm_size(MPI_COMM_WORLD,&nprocs);
 
-    if (narg <= 1) 
-    {
-        if (me == 0) printf("Syntax: wordfreq file1 file2 ...\n");
-        MPI_Abort(MPI_COMM_WORLD,1);
-    }
+    // if (narg <= 1) 
+    // {
+    //     if (me == 0) printf("Syntax: wordfreq file1 file2 ...\n");
+    //     MPI_Abort(MPI_COMM_WORLD,1);
+    // }
 
 
   // double tstart = MPI_Wtime();
