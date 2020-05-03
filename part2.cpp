@@ -10,7 +10,7 @@ vector<double> pageranks(10000, 0.0f);
 void mapper(MPI_Comm mpi_comm, int nproc, int rank, vector<double> pageranks)
 {
     int batchsize = num_pages/(nproc);
-    vector<double> pageranks_im(num_pages, 0.0f);
+    vector<double> temppageranks(num_pages, 0.0f);
     for(int i=0; i<pageranks.size(); i++)
     {
       	int n = outedges[(rank*batchsize) + i].size();
@@ -18,7 +18,7 @@ void mapper(MPI_Comm mpi_comm, int nproc, int rank, vector<double> pageranks)
         {
             for(int j =0; j<n; j++)
             {
-                pageranks_im[outedges[(rank*batchsize)+i][j]] += (double)(pageranks[i]/n);
+                temppageranks[outedges[(rank*batchsize)+i][j]] += (double)(pageranks[i]/n);
             }
         }
     }
@@ -26,7 +26,7 @@ void mapper(MPI_Comm mpi_comm, int nproc, int rank, vector<double> pageranks)
     {
         if(i!=rank)
         {
-            MPI_Send(&pageranks_im[i*batchsize],batchsize, MPI_DOUBLE, i, 1, mpi_comm);
+            MPI_Send(&temppageranks[i*batchsize],batchsize, MPI_DOUBLE, i, 1, mpi_comm);
         }
     }
 }
@@ -35,16 +35,16 @@ void reducer(MPI_Comm mpi_comm, int nprocs, vector<double> &pagerank)
 {
     int n = num_pages/(nprocs);
     vector<double> pg(n,0.0f);
-    vector<double> pg_acc(n,0.0f);
+    vector<double> temppageranks(n,0.0f);
     for (int j = 0; j < nprocs; j++) 
     {
-        MPI_Recv(&pg[0],n, MPI_DOUBLE, j, 1, mpi_comm, MPI_STATUS_IGNORE);
+        MPI_Recv(&pg[0],n, MPI_DOUBLE, j, 1, mpi_comm, 0);
         for(int i =0; i<n; i++)
         {
-          pg_acc[i] += pg[i];
+          temppageranks[i] += pg[i];
         }
     }
-    pagerank =  pg_acc;
+    pagerank =  temppageranks;
 }
 
 int main(int narg, char **args) 
