@@ -4,7 +4,7 @@ using namespace std;
 
 vector<vector<int>> outedges(100000);
 vector<vector<double>> temppageranks(100000);
-vector<double> pageranks(100000, 0.0f);
+vector<double> pageranks;
 vector<double> dp_arr;
 int num_pages=0;
 
@@ -32,6 +32,7 @@ void mapper(int key, double pgrank)
         {
             // kv->add(outgoing_links[key][i],sizeof(int),(pgrank/n),sizeof(double));
             temppageranks[outedges[key][i]].push_back((pgrank/n));
+            // cout<<"Page "<<outedges[key][i]<<" got assigned the value "<<(pgrank/n)<<endl;
         }
     }
 }
@@ -39,9 +40,10 @@ void mapper(int key, double pgrank)
 void mapper1(int key, double pgrank)
 {
     int n = outedges[key].size();
+    //std::cout<<"Size for key = "<<key<<" is "<<n<<" with value "<<pgrank<<std::endl;
     if(n==0)
     {
-        dp_arr.push_back(pgrank);
+        dp_arr[key]=(pgrank);
     }
 }
 
@@ -52,7 +54,9 @@ void reducer(int key, vector<double> pgranks)
     for(int i =0; i<n; i++)
     {
         new_rank = new_rank+ pgranks[i];
+        // std::cout<<"New page rank for key "<<key<<" is "<<pgranks[i]<<std::endl;
     }
+    // std::cout<<"New page rank for key "<<key<<" is "<<new_rank<<std::endl;
     pageranks[key] = new_rank;
 }
 
@@ -63,7 +67,7 @@ int main(int argc, char *argv[])
     // int me,nprocs;
     // nprocs=2;
     float s=0.85;
-    std::cout<<"OHHHHHHHHH"<<std::endl;
+    // std::cout<<"OHHHHHHHHH"<<std::endl;
     ifstream fin;
     string filename="test/mytest.txt";
     if(argc>=1){
@@ -80,13 +84,15 @@ int main(int argc, char *argv[])
     num_pages++;
     fin.close();
 
-    double def_pagerank=1/num_pages;
-
+    double def_pagerank=1.0/num_pages;
+    vector<double> temp(num_pages+1, 0.0);
+    vector<double> temp2(num_pages+1, 0.0);
+    dp_arr=temp2;
     for(int i=0;i<num_pages;i++)
     {
-        pageranks.push_back(def_pagerank);
+        temp[i]=(def_pagerank);
     }
-
+    pageranks=temp;
     // MPI_Comm_rank(MPI_COMM_WORLD,&me);
     // MPI_Comm_size(MPI_COMM_WORLD,&nprocs);
 
@@ -120,6 +126,7 @@ int main(int argc, char *argv[])
         for(int i=0; i<dp_arr.size(); i++)
         {
             dp = dp+ (dp_arr[i]/num_pages);
+            //std::cout<<"updating dp with"<<(dp_arr[i]/num_pages)<<std::endl;
         }
 
         // MPI_Barrier(MPI_COMM_WORLD);
@@ -144,21 +151,24 @@ int main(int argc, char *argv[])
         // mr->gather(1);
         for(int i=0; i<num_pages; i++)
         {
-            pageranks[i] = s*pageranks[i] +  (1-s)/(num_pages) + s*dp ;
+            pageranks[i] = (s*pageranks[i]) +  ((1-s)/(num_pages)) + (s*dp) ;
         }
 
         //normalize
-        double ans = 0.0;
-        for(int i=0; i<num_pages; i++)
-        {
-            ans += pageranks[i];
-        }
-        for(int i=0; i<num_pages; i++)
-        {
-            pageranks[i]=pageranks[i]/ans;
-        }
-
-        if(iter>20)
+        // double ans = 0.0;
+        // for(int i=0; i<num_pages; i++)
+        // {
+        //     ans += pageranks[i];
+        // }
+        // for(int i=0; i<num_pages; i++)
+        // {
+        //     pageranks[i]=pageranks[i]/ans;
+        // }
+       
+        temppageranks.clear();
+        vector<vector<double>> tempassign(100000);
+        temppageranks=tempassign;
+        if(iter>=20)
             break;
         iter++;
         // delete mr;
@@ -167,13 +177,19 @@ int main(int argc, char *argv[])
     double ans = 0.0;
     end = std::chrono::system_clock::now(); 
     std::chrono::duration<double> elapsed_seconds = end - start; 
+         for(int i=0; i<num_pages; i++)
+        {
+            cout<<i<<" = "<<pageranks[i]<<endl;
+            ans =ans+ pageranks[i];
+        }
+        cout<<"sum "<<ans<<std::endl;
+    // for(int i=0; i<num_pages; i++)
+    // {
+    //     cout<<i<<" = "<<pageranks[i]<<endl;
+    //     ans =ans+ pageranks[i];
+    // }
+    // cout<<"sum "<<ans;
     std::cout<< "elapsed time: " << elapsed_seconds.count() << "s\n"; 
-    for(int i=0; i<num_pages; i++)
-    {
-        cout<<i<<" = "<<pageranks[i]<<endl;
-        ans =ans+ pageranks[i];
-    }
-    cout<<"sum "<<ans;
  
   // double tstop = MPI_Wtime();
 
