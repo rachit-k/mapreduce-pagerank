@@ -213,7 +213,7 @@ class datasource : mapreduce::detail::noncopyable
   private:
     unsigned sequence_;
     unsigned long len;
-};
+}
 
 struct map_task : public mapreduce::map_task<unsigned, double >
 {
