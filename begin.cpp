@@ -49,6 +49,7 @@ namespace Ap_calc {
 std::vector<std:: vector<unsigned> > outedges;
 std::vector<double> pr;
 unsigned long size_graph;
+double dprod=0.0;
 bool const is_outgoing(unsigned const page1, unsigned const page2)
 {
     return (page_rank[page1][page2])==1;
@@ -121,7 +122,7 @@ struct map_task : public mapreduce::map_task<unsigned, double >
             if(emit_key==24){
                 //std::cout<<"value emitted is "<<temp<<std::endl;
             }
-            runtime.emit_intermediate(emit_key, fraction*temp);
+            runtime.emit_intermediate(emit_key, fraction*(temp+dprod));
             
         }
         runtime.emit_intermediate(key, (1-fraction)/(size_graph));
@@ -213,7 +214,7 @@ class datasource : mapreduce::detail::noncopyable
   private:
     unsigned sequence_;
     unsigned long len;
-}
+};
 
 struct map_task : public mapreduce::map_task<unsigned, double >
 {
@@ -222,7 +223,8 @@ struct map_task : public mapreduce::map_task<unsigned, double >
     {
         int n = d_vec[key];
         double temp=value*n;
-        runtime.emit_intermediate(key, fraction*temp);
+        key_type const emitkey=0;
+        runtime.emit_intermediate(emitkey, fraction*temp);
     }
 };
 
@@ -231,7 +233,7 @@ struct reduce_task : public mapreduce::reduce_task<unsigned, double >
     template<typename Runtime, typename It>
     void operator()(Runtime &runtime, key_type const &key, It it, It ite) const
     {
-        if(key>size_graph){
+        if(key!=0){
             return;
         }
         value_type results=0.0;
@@ -317,7 +319,7 @@ int main(int argc, char *argv[])
     int num_iterations=0;
     Ap_calc::calc_outedges();
     Dp_calc::mask_nonoutgoing();
-    int max_iterations=20;
+    int max_iterations=100;
     if(argc>2){
         max_iterations=atoi(argv[2]);
     }
@@ -338,29 +340,25 @@ int main(int argc, char *argv[])
         mapreduce::results result;
         mapreduce::results result_dp;
         #ifdef _DEBUG
-            job.run<mapreduce::schedule_policy::sequential<Ap_calc::job> >(result);
             job_dp.run<mapreduce::schedule_policy::sequential<Dp_calc::job> >(result_dp);
         #else
-            job.run<mapreduce::schedule_policy::cpu_parallel<Ap_calc::job> >(result);
             job_dp.run<mapreduce::schedule_policy::cpu_parallel<Dp_calc::job> >(result_dp);
         #endif
-        
+        Ap_calc::dprod=job_dp.begin_results()->second/global_size;
+        #ifdef _DEBUG
+            job.run<mapreduce::schedule_policy::sequential<Ap_calc::job> >(result);
+        #else
+            job.run<mapreduce::schedule_policy::cpu_parallel<Ap_calc::job> >(result);
+        #endif
         for (auto it=job.begin_results(); it!=job.end_results(); ++it)
         {
-            probability_ap[it->first]=it->second;
-        }
-        for (auto it=job_dp.begin_results(); it!=job_dp.end_results(); ++it)
-        {
-            probability_dp[it->first]=it->second/global_size;
-            // std::cout<<"We are here at probability_dp with "<<it->second<<std::endl;
-        }
-        for(int i=0;i<global_size;++i){
-            probablity[i]=probability_ap[i]+probability_dp[i];
+            probablity[it->first]=it->second;
         }
         double norm=get_sum();
-        for(int i=0;i<global_size;++i){
-            probablity[i]=probablity[i]/norm;
-        }
+        // for(int i=0;i<global_size;++i){
+        //     probablity[i]=probablity[i]/norm;
+        // }
+        // std::cout<<"After "<<num_iterations+1<<" number of iterations "<<norm<<std::endl;
         
         num_iterations++;
     }
