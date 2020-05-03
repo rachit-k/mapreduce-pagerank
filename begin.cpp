@@ -16,11 +16,11 @@
 #include <chrono>
 #include "mapreduce.hpp"
 double *probablity;
-float fraction=1.0;
+double fraction=1.0;
 unsigned long global_size;
 unsigned **page_rank;
 void print_prob(){
-    float s=0.0;
+    double s=0.0;
     for(unsigned long i=0;i<global_size;++i){
         s=s+probablity[i];
         std::cout<<i<<" = "<<probablity[i]<<std::endl;
@@ -214,9 +214,6 @@ class datasource : mapreduce::detail::noncopyable
     unsigned sequence_;
     unsigned long len;
 };
-  
-
-float prod_dp=0.0;
 
 struct map_task : public mapreduce::map_task<unsigned, double >
 {

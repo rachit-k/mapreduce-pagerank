@@ -170,10 +170,10 @@ int main(int argc, char *argv[])
     std::cout<< "elapsed time: " << elapsed_seconds.count() << "s\n"; 
     for(int i=0; i<num_pages; i++)
     {
-        cout<<i<<" : "<<pageranks[i]<<endl;
+        cout<<i<<" = "<<pageranks[i]<<endl;
         ans =ans+ pageranks[i];
     }
-    cout<<"sum:"<<ans;
+    cout<<"sum "<<ans;
  
   // double tstop = MPI_Wtime();
 
