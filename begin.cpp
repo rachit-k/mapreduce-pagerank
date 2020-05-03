@@ -14,27 +14,27 @@
 #endif
 #include <string>
 #include "mapreduce.hpp"
-
-namespace friend_graph {
-
-unsigned const friends[8][8] = { { 0, 1, 0, 1, 1, 0, 0, 0 },
-                                 { 0, 0, 0, 1, 0, 0, 0, 1 },
-                                 { 0, 0, 0, 1, 0, 1, 0, 0 },
-                                 { 0, 0, 0, 0, 1, 0, 0, 1 },
-                                 { 0, 0, 0, 0, 0, 1, 0, 0 },
-                                 { 0, 0, 0, 0, 0, 0, 0, 0 },
-                                 { 0, 0, 0, 0, 0, 0, 0, 1 },
-                                 { 0, 0, 0, 0, 0, 0, 0, 0 } };
-char const * const names[] = { "Steve", "Anne", "Michael", "Brett", "Diane", "Sue", "Ruby", "Jack" };
-unsigned **page_rank;
 double *probablity;
+unsigned long global_size;
+unsigned **page_rank;
+void print_prob(){
+    for(unsigned long i=0;i<global_size;++i){
+        std::cout<<probablity[i]<<std::endl;
+    }
+}
+void print_graph(){
+    for(unsigned long i=0;i<global_size;++i){
+        for(unsigned long j=0;j<global_size;++j){
+            std::cout<<page_rank[i][j]<<" ";
+        }
+        std::cout<<std::endl;
+    }
+}
+namespace Ap_calc {
+// pls pld check outedges wala code with -1
 std::vector<std:: vector<unsigned> > outedges;
 std::vector<double> pr;
 unsigned long size_graph;
-bool const is_friend(unsigned const person1, unsigned const person2)
-{
-    return person1 != person2  &&  (friends[person1][person2]  ||  friends[person2][person1]);
-}
 bool const is_outgoing(unsigned const page1, unsigned const page2)
 {
     return (page_rank[page1][page2])==1;
@@ -46,20 +46,6 @@ unsigned long const outgoing(unsigned const page1)
         sum=sum+page_rank[page1][i];
     }
     return sum;
-}
-void print_graph(){
-    for(unsigned long i=0;i<size_graph;++i){
-        for(unsigned long j=0;j<size_graph;++j){
-            std::cout<<page_rank[i][j]<<" ";
-        }
-        std::cout<<std::endl;
-    }
-}
-void print_prob(){
-    for(unsigned long i=0;i<size_graph;++i){
-        std::cout<<probablity[i]<<std::endl;
-    }
-
 }
 void calc_outedges()
 {
@@ -104,10 +90,6 @@ class datasource : mapreduce::detail::noncopyable
     unsigned sequence_;
     unsigned long len;
 };
-  
-
-float prod_dp=0.0;
-
 struct map_task : public mapreduce::map_task<unsigned, double >
 {
     template<typename Runtime>
@@ -153,14 +135,118 @@ struct reduce_task : public mapreduce::reduce_task<unsigned, double >
 };  
 
 typedef
-mapreduce::job<friend_graph::map_task,
-               friend_graph::reduce_task,
+mapreduce::job<Ap_calc::map_task,
+               Ap_calc::reduce_task,
                mapreduce::null_combiner,
-               friend_graph::datasource<friend_graph::map_task>
+               Ap_calc::datasource<Ap_calc::map_task>
 > job;
 
-} // namespace friend_graph
+} // namespace Ap_calc
+namespace Dp_calc {
+unsigned *d_vec;
+unsigned long size_graph;
+bool const is_outgoing(unsigned const page1, unsigned const page2)
+{
+    return (page_rank[page1][page2])==1;
+}
+unsigned long const outgoing(unsigned const page1)
+{
+    unsigned long sum=0;
+    for(unsigned long i=0;i<size_graph;++i){
+        sum=sum+page_rank[page1][i];
+    }
+    return sum;
+}
 
+void mask_nonoutgoing()
+{
+    d_vec= new unsigned[size_graph];
+
+    for(unsigned long i=0;i<size_graph;++i){
+        bool flag=false;
+        for(unsigned long j=0;j<size_graph;++j){
+            if(page_rank[i][j]>0){
+                d_vec[i]=0;
+                flag=true;
+                continue;
+            }
+        }
+        if(!flag)
+            d_vec[i]=1;
+    }
+}
+template<typename MapTask>
+class datasource : mapreduce::detail::noncopyable
+{
+  public:
+    datasource() : sequence_(0)
+    {
+    }
+    datasource(unsigned long size): sequence_(0){
+        len=size;
+    }
+
+    bool const setup_key(typename MapTask::key_type &key)
+    {
+        key = sequence_++;
+        return key<len;
+    }
+
+    bool const get_data(typename MapTask::key_type const &key, typename MapTask::value_type &value)
+    {
+        value=probablity[key];
+        //std::cout<<"Len is "<<len<<std::endl;
+        return true;
+    }
+
+  private:
+    unsigned sequence_;
+    unsigned long len;
+};
+  
+
+float prod_dp=0.0;
+
+struct map_task : public mapreduce::map_task<unsigned, double >
+{
+    template<typename Runtime>
+    void operator()(Runtime &runtime, key_type const &key, value_type const &value) const
+    {
+        int n = d_vec[key];
+        double temp=value*n;
+        runtime.emit_intermediate(key, temp);
+        runtime.emit_intermediate(key, 0.0);
+    }
+};
+
+struct reduce_task : public mapreduce::reduce_task<unsigned, double >
+{
+    template<typename Runtime, typename It>
+    void operator()(Runtime &runtime, key_type const &key, It it, It ite) const
+    {
+        if(key>size_graph){
+            return;
+        }
+        value_type results=0.0;
+        
+        for (It it1=it; it1!=ite; ++it1)
+        {
+            results = results+ (*it1);
+            
+        }
+        
+        runtime.emit(key, results);        
+    }
+};  
+
+typedef
+mapreduce::job<Dp_calc::map_task,
+               Dp_calc::reduce_task,
+               mapreduce::null_combiner,
+               Dp_calc::datasource<Dp_calc::map_task>
+> job;
+
+} // namespace Dp_calc
 int main(int argc, char *argv[])
 {
     mapreduce::specification spec;
@@ -198,53 +284,72 @@ int main(int argc, char *argv[])
             max=temp;
         }
     }
-    // std::cout <<"\nggg Here with max " <<max<<std::endl;
     unsigned long size=max+1;
-    friend_graph::size_graph=size;
-    friend_graph::page_rank= new unsigned*[size];
+    global_size=size;
+    Ap_calc::size_graph=size;
+    Dp_calc::size_graph=size;
+    page_rank= new unsigned*[size];
     for(unsigned i = 0; i < size; ++i)
-        friend_graph::page_rank[i] = new unsigned[size];
+        page_rank[i] = new unsigned[size];
     for(unsigned i = 0; i < size; ++i){
         for(unsigned j=0; j < size; ++j){
-            friend_graph::page_rank[i][j]=0;
+            page_rank[i][j]=0;
         }
     }
     //page rank initialisation
     for(auto x:page_coordinates){
-        friend_graph::page_rank[x.first][x.second]=1;
+        page_rank[x.first][x.second]=1;
     }
-    friend_graph::probablity = new double[size];
+    probablity = new double[size];
     //probability initailisation
     for(unsigned i =0;i<size;++i){
-        friend_graph::probablity[i] = (double)1/size;
+        probablity[i] = (double)1/size;
 
     }
     //print the page rank graph
-    friend_graph::print_graph();
+    print_graph();
     int num_iterations=0;
-    friend_graph::calc_outedges();
-    
+    Ap_calc::calc_outedges();
+    Dp_calc::mask_nonoutgoing();
     int max_iterations=20;
     if(argc>2){
         max_iterations=atoi(argv[2]);
     }
+    double probability_dp[global_size];
+    double probability_ap[global_size];
+    for(int i=0;i<global_size;++i){
+        probability_ap[i]=0.0;
+        probability_dp[i]=0.0;
+    }
     while(num_iterations<max_iterations){
-        friend_graph::job::datasource_type datasource(size);
-        friend_graph::job job(datasource, spec);
-        
+        Ap_calc::job::datasource_type datasource(size);
+        Ap_calc::job job(datasource, spec);
+        Dp_calc::job::datasource_type datasource_dp(size);
+        Dp_calc::job job_dp(datasource_dp, spec);
         mapreduce::results result;
+        mapreduce::results result_dp;
         #ifdef _DEBUG
-            job.run<mapreduce::schedule_policy::sequential<friend_graph::job> >(result);
+            job.run<mapreduce::schedule_policy::sequential<Ap_calc::job> >(result);
+            job_dp.run<mapreduce::schedule_policy::sequential<Dp_calc::job> >(result_dp);
         #else
-            job.run<mapreduce::schedule_policy::cpu_parallel<friend_graph::job> >(result);
+            job.run<mapreduce::schedule_policy::cpu_parallel<Ap_calc::job> >(result);
+            job_dp.run<mapreduce::schedule_policy::cpu_parallel<Dp_calc::job> >(result_dp);
         #endif
-
+        
         for (auto it=job.begin_results(); it!=job.end_results(); ++it)
         {
-            friend_graph::probablity[it->first]=it->second;
+            probability_ap[it->first]=it->second;
+        }
+        for (auto it=job_dp.begin_results(); it!=job_dp.end_results(); ++it)
+        {
+            probability_dp[it->first]=it->second/global_size;
+            std::cout<<"We are here at probability_dp with "<<it->second<<std::endl;
+        }
+        for(int i=0;i<global_size;++i){
+            probablity[i]=probability_ap[i]+probability_dp[i];
         }
         std::cout<<"After "<<num_iterations+1<<" number of iterations "<<std::endl;
-        friend_graph::print_prob();
+        print_prob();
         num_iterations++;
     }
     return 0;
