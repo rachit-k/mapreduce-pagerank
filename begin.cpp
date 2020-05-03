@@ -19,9 +19,12 @@ float fraction=1.0;
 unsigned long global_size;
 unsigned **page_rank;
 void print_prob(){
+    float s=0.0;
     for(unsigned long i=0;i<global_size;++i){
-        std::cout<<probablity[i]<<std::endl;
+        s=s+probablity[i];
+        std::cout<<i<<" = "<<probablity[i]<<std::endl;
     }
+    std::cout<<"sum "<<s<<std::endl;
 }
 void print_graph(){
     for(unsigned long i=0;i<global_size;++i){
@@ -307,7 +310,6 @@ int main(int argc, char *argv[])
 
     }
     //print the page rank graph
-    print_graph();
     int num_iterations=0;
     Ap_calc::calc_outedges();
     Dp_calc::mask_nonoutgoing();
