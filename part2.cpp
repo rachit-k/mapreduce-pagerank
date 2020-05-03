@@ -1,43 +1,44 @@
 #include <bits/stdc++.h>
 #include <mpi.h>
 using namespace std;
-int num_pages=0;
+long long num_pages=0;
 
 vector<vector<int> > outedges(100000);
-vector<double> pageranks(10000, 0.0f);
+vector<double> pageranks;
+vector<vector<double> > temppageranks(100000);
 // vector<double> sumlist;
 
 void mapper(MPI_Comm mpi_comm, int nproc, int rank, vector<double> pageranks)
 {
     int batchsize = num_pages/(nproc);
-    vector<double> temppageranks(num_pages, 0.0f);
-    for(int i=0; i<pageranks.size(); i++)
+    
+
+    for(long long i=0; i<num_pages; i++)
     {
-      	int n = outedges[(rank*batchsize) + i].size();
+        temppageranks[i].push_back(0.0);
+      	int n = outedges[i].size();
       	if(n!=0)
         {
-            for(int j =0; j<n; j++)
+            long start=rank;
+            for(int j =start*n/nproc; j<(start+1)*n/nproc; j++)
             {
-                temppageranks[outedges[(rank*batchsize)+i][j]] += (double)(pageranks[i]/n);
+                temppageranks[outedges[i][j]].push_back( (double)(pageranks[i]/n));
             }
-        }
-    }
-    for (int i = 0; i < nproc; i++) 
-    {
-        if(i!=rank)
-        {
-            MPI_Send(&temppageranks[i*batchsize],batchsize, MPI_DOUBLE, i, 1, mpi_comm);
+            MPI_Send(&temppageranks,batchsize, MPI_DOUBLE, 0, 1, mpi_comm);
         }
     }
 }
 
-void reducer(MPI_Comm mpi_comm, int nprocs, vector<double> &pagerank)
+void reducer(MPI_Comm mpi_comm, int nprocs, vector<double> &pagerank, int rank)
 {
     int n = num_pages/(nprocs);
     vector<double> pg(n,0.0f);
     vector<double> temppageranks(n,0.0f);
+    if(rank==0)
+    {
     for (int j = 0; j < nprocs; j++) 
     {
+        cout<<"Here receiving from process "<<j<<" for rank "<<rank<<endl;
         MPI_Recv(&pg[0],n, MPI_DOUBLE, j, 1, mpi_comm, 0);
         for(int i =0; i<n; i++)
         {
@@ -45,6 +46,7 @@ void reducer(MPI_Comm mpi_comm, int nprocs, vector<double> &pagerank)
         }
     }
     pagerank =  temppageranks;
+    }
 }
 
 int main(int narg, char **args) 
@@ -68,12 +70,14 @@ int main(int narg, char **args)
     num_pages++;
     fin.close();
 
-    double def_pagerank=1/num_pages;
-
+    double def_pagerank=1.0/num_pages;
+    vector<double> temp(num_pages+1, 0.0);
+    vector<double> temp2(num_pages+1, 0.0);
     for(int i=0;i<num_pages;i++)
     {
-        pageranks.push_back(def_pagerank);
+        temp[i]=(def_pagerank);
     }
+    pageranks=temp;
 
     MPI_Comm_rank(MPI_COMM_WORLD,&me);
     MPI_Comm_size(MPI_COMM_WORLD,&nprocs);
@@ -83,16 +87,18 @@ int main(int narg, char **args)
     {
         mapper(MPI_COMM_WORLD, nprocs, me, pageranks);
 
-        cout<<"here"<<me<<endl;
+        cout<<"here "<<me<<endl;
         MPI_Barrier(MPI_COMM_WORLD);
-
-        reducer(MPI_COMM_WORLD, nprocs, pageranks);
+        //cout<<"Beyonf the barrier "<<endl;
+        reducer(MPI_COMM_WORLD, nprocs, pageranks, me);
 
         for(int i=0; i<num_pages; i++)
         {
             cout<<i<<" = "<<pageranks[i]<<endl;
         }
-        if(iter>20)
+        vector<vector<double> > tempassign(100000);
+        temppageranks=tempassign;
+        if(iter>=0)
             break;
         iter++;
     }
