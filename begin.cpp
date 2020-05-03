@@ -15,6 +15,7 @@
 #include <string>
 #include "mapreduce.hpp"
 double *probablity;
+float fraction=1.0;
 unsigned long global_size;
 unsigned **page_rank;
 void print_prob(){
@@ -107,10 +108,10 @@ struct map_task : public mapreduce::map_task<unsigned, double >
             if(emit_key==24){
                 //std::cout<<"value emitted is "<<temp<<std::endl;
             }
-            runtime.emit_intermediate(emit_key, temp);
+            runtime.emit_intermediate(emit_key, fraction*temp);
             
         }
-        runtime.emit_intermediate(key, 0.0);
+        runtime.emit_intermediate(key, (1-fraction)/size_graph);
     }
 };
 
@@ -214,8 +215,7 @@ struct map_task : public mapreduce::map_task<unsigned, double >
     {
         int n = d_vec[key];
         double temp=value*n;
-        runtime.emit_intermediate(key, temp);
-        runtime.emit_intermediate(key, 0.0);
+        runtime.emit_intermediate(key, fraction*temp);
     }
 };
 
@@ -311,7 +311,7 @@ int main(int argc, char *argv[])
     int num_iterations=0;
     Ap_calc::calc_outedges();
     Dp_calc::mask_nonoutgoing();
-    int max_iterations=20;
+    int max_iterations=40;
     if(argc>2){
         max_iterations=atoi(argv[2]);
     }
@@ -321,6 +321,7 @@ int main(int argc, char *argv[])
         probability_ap[i]=0.0;
         probability_dp[i]=0.0;
     }
+    fraction=0.5;
     while(num_iterations<max_iterations){
         Ap_calc::job::datasource_type datasource(size);
         Ap_calc::job job(datasource, spec);
@@ -342,16 +343,17 @@ int main(int argc, char *argv[])
         }
         for (auto it=job_dp.begin_results(); it!=job_dp.end_results(); ++it)
         {
-            probability_dp[it->first]=it->second/global_size;
-            std::cout<<"We are here at probability_dp with "<<it->second<<std::endl;
+            probability_dp[it->first]=it->second;
+            // std::cout<<"We are here at probability_dp with "<<it->second<<std::endl;
         }
         for(int i=0;i<global_size;++i){
             probablity[i]=probability_ap[i]+probability_dp[i];
         }
-        std::cout<<"After "<<num_iterations+1<<" number of iterations "<<std::endl;
-        print_prob();
+        
         num_iterations++;
     }
+    std::cout<<"After "<<num_iterations+1<<" number of iterations "<<std::endl;
+    print_prob();
     return 0;
 }
 
