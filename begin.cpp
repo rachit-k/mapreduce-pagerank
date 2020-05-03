@@ -19,6 +19,7 @@ double *probablity;
 double fraction=1.0;
 unsigned long global_size;
 unsigned **page_rank;
+unsigned *d_vec;
 void print_prob(){
     double s=0.0;
     for(unsigned long i=0;i<global_size;++i){
@@ -42,6 +43,23 @@ void print_graph(){
             std::cout<<page_rank[i][j]<<" ";
         }
         std::cout<<std::endl;
+    }
+}
+void mask_nonoutgoing()
+{
+    d_vec= new unsigned[global_size];
+
+    for(unsigned long i=0;i<global_size;++i){
+        bool flag=false;
+        for(unsigned long j=0;j<global_size;++j){
+            if(page_rank[i][j]>0){
+                d_vec[i]=0;
+                flag=true;
+                continue;
+            }
+        }
+        if(!flag)
+            d_vec[i]=1;
     }
 }
 namespace Ap_calc {
@@ -109,8 +127,9 @@ struct map_task : public mapreduce::map_task<unsigned, double >
     {
         int n = outedges[key].size();
         //calc prod_dp   
-        // /std::cout<<"Value is"<<value<<std::endl;
+        //std::cout<<"n is"<<n<<std::endl;
         if(n==0){
+            runtime.emit_intermediate(key,d_vec[key]*dprod*fraction+ (1-fraction)/(size_graph));
             return;
         }
         for (int i=0;i<n;i++)
@@ -119,13 +138,10 @@ struct map_task : public mapreduce::map_task<unsigned, double >
             double temp=value/n;
             // temp = value/n; what to do here?
             //std::cout<<"Emitting for key "<<key<<std::endl;
-            if(emit_key==24){
-                //std::cout<<"value emitted is "<<temp<<std::endl;
-            }
-            runtime.emit_intermediate(emit_key, fraction*(temp+dprod));
+            runtime.emit_intermediate(emit_key, fraction*(temp));
             
         }
-        runtime.emit_intermediate(key, (1-fraction)/(size_graph));
+        runtime.emit_intermediate(key,dprod*fraction+ (1-fraction)/(size_graph));
     }
 };
 
@@ -155,7 +171,7 @@ mapreduce::job<Ap_calc::map_task,
 
 } // namespace Ap_calc
 namespace Dp_calc {
-unsigned *d_vec;
+
 unsigned long size_graph;
 bool const is_outgoing(unsigned const page1, unsigned const page2)
 {
@@ -170,23 +186,7 @@ unsigned long const outgoing(unsigned const page1)
     return sum;
 }
 
-void mask_nonoutgoing()
-{
-    d_vec= new unsigned[size_graph];
 
-    for(unsigned long i=0;i<size_graph;++i){
-        bool flag=false;
-        for(unsigned long j=0;j<size_graph;++j){
-            if(page_rank[i][j]>0){
-                d_vec[i]=0;
-                flag=true;
-                continue;
-            }
-        }
-        if(!flag)
-            d_vec[i]=1;
-    }
-}
 template<typename MapTask>
 class datasource : mapreduce::detail::noncopyable
 {
@@ -224,7 +224,7 @@ struct map_task : public mapreduce::map_task<unsigned, double >
         int n = d_vec[key];
         double temp=value*n;
         key_type const emitkey=0;
-        runtime.emit_intermediate(emitkey, fraction*temp);
+        runtime.emit_intermediate(emitkey, temp);
     }
 };
 
@@ -293,6 +293,7 @@ int main(int argc, char *argv[])
             max=temp;
         }
     }
+    std::cout<<"File Reading done "<<std::endl;
     unsigned long size=max+1;
     global_size=size;
     Ap_calc::size_graph=size;
@@ -318,20 +319,15 @@ int main(int argc, char *argv[])
     //print the page rank graph
     int num_iterations=0;
     Ap_calc::calc_outedges();
-    Dp_calc::mask_nonoutgoing();
-    int max_iterations=100;
+    mask_nonoutgoing();
+    int max_iterations=20;
     if(argc>2){
         max_iterations=atoi(argv[2]);
-    }
-    double probability_dp[global_size];
-    double probability_ap[global_size];
-    for(int i=0;i<global_size;++i){
-        probability_ap[i]=0.0;
-        probability_dp[i]=0.0;
     }
     fraction=0.85;
     std::chrono::time_point<std::chrono::system_clock> start, end; 
     start = std::chrono::system_clock::now(); 
+    std::cout<<"Starting iterations "<<std::endl;
     while(num_iterations<max_iterations){
         Ap_calc::job::datasource_type datasource(size);
         Ap_calc::job job(datasource, spec);
@@ -345,6 +341,7 @@ int main(int argc, char *argv[])
             job_dp.run<mapreduce::schedule_policy::cpu_parallel<Dp_calc::job> >(result_dp);
         #endif
         Ap_calc::dprod=job_dp.begin_results()->second/global_size;
+        //std::cout<<"After "<<num_iterations+1<<" number of iterations "<<Ap_calc::dprod<<std::endl;
         #ifdef _DEBUG
             job.run<mapreduce::schedule_policy::sequential<Ap_calc::job> >(result);
         #else
@@ -354,7 +351,7 @@ int main(int argc, char *argv[])
         {
             probablity[it->first]=it->second;
         }
-        double norm=get_sum();
+        
         // for(int i=0;i<global_size;++i){
         //     probablity[i]=probablity[i]/norm;
         // }
@@ -364,9 +361,41 @@ int main(int argc, char *argv[])
     }
     end = std::chrono::system_clock::now(); 
     std::chrono::duration<double> elapsed_seconds = end - start; 
-    std::cout<< "elapsed time: " << elapsed_seconds.count() << "s\n"; 
-    std::cout<<"After "<<num_iterations+1<<" number of iterations "<<std::endl;
-    print_prob();
+    std::cout<< "Paralle elapsed time: " << elapsed_seconds.count() << "s\n"; 
+    // std::cout<<"After "<<num_iterations+1<<" number of iterations "<<std::endl;
+    //     print_prob();
+    for(unsigned i =0;i<size;++i){
+        probablity[i] = (double)1/size;
+
+    }
+    num_iterations=0;
+    start = std::chrono::system_clock::now(); 
+    while(num_iterations<max_iterations){
+        Ap_calc::job::datasource_type datasource(size);
+        Ap_calc::job job(datasource, spec);
+        Dp_calc::job::datasource_type datasource_dp(size);
+        Dp_calc::job job_dp(datasource_dp, spec);
+        mapreduce::results result;
+        mapreduce::results result_dp;
+        job_dp.run<mapreduce::schedule_policy::sequential<Dp_calc::job> >(result_dp);
+        Ap_calc::dprod=job_dp.begin_results()->second/global_size;
+
+        job.run<mapreduce::schedule_policy::sequential<Ap_calc::job> >(result);
+        for (auto it=job.begin_results(); it!=job.end_results(); ++it)
+        {
+            probablity[it->first]=it->second;
+        }
+        
+        // for(int i=0;i<global_size;++i){
+        //     probablity[i]=probablity[i]/norm;
+        // }
+        // std::cout<<"After "<<num_iterations+1<<" number of iterations "<<norm<<std::endl;
+        
+        num_iterations++;
+    }
+    end = std::chrono::system_clock::now(); 
+     elapsed_seconds = end - start; 
+    std::cout<< "Serial elapsed time: " << elapsed_seconds.count() << "s\n"; 
     return 0;
 }
 
