@@ -1,5 +1,5 @@
 #include <bits/stdc++.h>
-
+#include <chrono>
 using namespace std;
 
 vector<vector<int>> outedges(100000);
@@ -63,9 +63,13 @@ int main(int argc, char *argv[])
     // int me,nprocs;
     // nprocs=2;
     float s=0.85;
-
+    std::cout<<"OHHHHHHHHH"<<std::endl;
     ifstream fin;
-    fin.open("bull.txt");
+    string filename="test/mytest.txt";
+    if(argc>=1){
+        filename=argv[1];
+    }
+    fin.open(filename);
     int a,b;
     while(!fin.eof())
     {
@@ -95,6 +99,8 @@ int main(int argc, char *argv[])
 
   // double tstart = MPI_Wtime();
     int iter=0;
+    std::chrono::time_point<std::chrono::system_clock> start, end; 
+    start = std::chrono::system_clock::now(); 
     while(true)
     {
         // MapReduce *mr = new MapReduce(MPI_COMM_WORLD);
@@ -159,6 +165,9 @@ int main(int argc, char *argv[])
     }
 
     double ans = 0.0;
+    end = std::chrono::system_clock::now(); 
+    std::chrono::duration<double> elapsed_seconds = end - start; 
+    std::cout<< "elapsed time: " << elapsed_seconds.count() << "s\n"; 
     for(int i=0; i<num_pages; i++)
     {
         cout<<i<<" : "<<pageranks[i]<<endl;

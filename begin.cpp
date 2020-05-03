@@ -13,6 +13,7 @@
 #   endif
 #endif
 #include <string>
+#include <chrono>
 #include "mapreduce.hpp"
 double *probablity;
 float fraction=1.0;
@@ -25,6 +26,15 @@ void print_prob(){
         std::cout<<i<<" = "<<probablity[i]<<std::endl;
     }
     std::cout<<"sum "<<s<<std::endl;
+}
+double get_sum()
+{   
+    double s=0.0;
+    for(unsigned long i=0;i<global_size;++i){
+        s=s+probablity[i];
+    }
+    return s;
+
 }
 void print_graph(){
     for(unsigned long i=0;i<global_size;++i){
@@ -59,9 +69,6 @@ void calc_outedges()
             if(page_rank[i][j]>0){
                 vec.push_back(j);
             }
-        }
-        if(vec.size()==0){
-            vec.push_back(-1);
         }
         outedges.push_back(vec);
     }
@@ -102,6 +109,9 @@ struct map_task : public mapreduce::map_task<unsigned, double >
         int n = outedges[key].size();
         //calc prod_dp   
         // /std::cout<<"Value is"<<value<<std::endl;
+        if(n==0){
+            return;
+        }
         for (int i=0;i<n;i++)
         {
             typename Runtime::reduce_task_type::key_type const emit_key = outedges[key][i];
@@ -114,7 +124,7 @@ struct map_task : public mapreduce::map_task<unsigned, double >
             runtime.emit_intermediate(emit_key, fraction*temp);
             
         }
-        runtime.emit_intermediate(key, (1-fraction)/size_graph);
+        runtime.emit_intermediate(key, (1-fraction)/(size_graph));
     }
 };
 
@@ -123,9 +133,6 @@ struct reduce_task : public mapreduce::reduce_task<unsigned, double >
     template<typename Runtime, typename It>
     void operator()(Runtime &runtime, key_type const &key, It it, It ite) const
     {
-        if(key>size_graph){
-            return;
-        }
         value_type results=0.0;
         
         for (It it1=it; it1!=ite; ++it1)
@@ -313,7 +320,7 @@ int main(int argc, char *argv[])
     int num_iterations=0;
     Ap_calc::calc_outedges();
     Dp_calc::mask_nonoutgoing();
-    int max_iterations=40;
+    int max_iterations=20;
     if(argc>2){
         max_iterations=atoi(argv[2]);
     }
@@ -323,7 +330,9 @@ int main(int argc, char *argv[])
         probability_ap[i]=0.0;
         probability_dp[i]=0.0;
     }
-    fraction=0.5;
+    fraction=0.85;
+    std::chrono::time_point<std::chrono::system_clock> start, end; 
+    start = std::chrono::system_clock::now(); 
     while(num_iterations<max_iterations){
         Ap_calc::job::datasource_type datasource(size);
         Ap_calc::job job(datasource, spec);
@@ -345,15 +354,22 @@ int main(int argc, char *argv[])
         }
         for (auto it=job_dp.begin_results(); it!=job_dp.end_results(); ++it)
         {
-            probability_dp[it->first]=it->second;
+            probability_dp[it->first]=it->second/global_size;
             // std::cout<<"We are here at probability_dp with "<<it->second<<std::endl;
         }
         for(int i=0;i<global_size;++i){
             probablity[i]=probability_ap[i]+probability_dp[i];
         }
+        double norm=get_sum();
+        for(int i=0;i<global_size;++i){
+            probablity[i]=probablity[i]/norm;
+        }
         
         num_iterations++;
     }
+    end = std::chrono::system_clock::now(); 
+    std::chrono::duration<double> elapsed_seconds = end - start; 
+    std::cout<< "elapsed time: " << elapsed_seconds.count() << "s\n"; 
     std::cout<<"After "<<num_iterations+1<<" number of iterations "<<std::endl;
     print_prob();
     return 0;
