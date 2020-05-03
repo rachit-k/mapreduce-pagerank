@@ -103,8 +103,8 @@ int main(int narg, char **args)
   rmat.order = 1 << rmat.nlevels;
 
   MapReduce *mr = new MapReduce(MPI_COMM_WORLD);
-  mr->verbosity = 0;
-  mr->timer = 1;
+  // mr->verbosity = 0;
+  // mr->timer = 1;
 
   // loop until desired number of unique nonzero entries
 

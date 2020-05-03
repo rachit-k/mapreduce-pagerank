@@ -5,13 +5,14 @@
 #include "sys/stat.h"
 #include "mapreduce.h"
 #include "keyvalue.h"
+#include <bits/stdc++.h>
 
 using namespace MAPREDUCE_NS;
 
-vector<vector<int>> outedges;
-vector<vector<double>> temppageranks;
-vector<double> pageranks;
-vector<double> dp_arr
+vector<vector<int>> outedges(100000);
+vector<vector<double>> temppageranks(100000);
+vector<double> pageranks(100000, 0.0f);
+vector<double> dp_arr;
 int num_pages=10000;
 
 // void fileread(int, char *, KeyValue *, void *);
@@ -83,7 +84,7 @@ int main(int narg, char **args)
 
     for(int i=0;i<num_pages;i++)
     {
-        pageranks.pushback(def_pagerank)
+        pageranks.pushback(def_pagerank);
     }
 
     MPI_Comm_rank(MPI_COMM_WORLD,&me);
@@ -95,18 +96,20 @@ int main(int narg, char **args)
         MPI_Abort(MPI_COMM_WORLD,1);
     }
 
-    MapReduce *mr = new MapReduce(MPI_COMM_WORLD);
+
   // double tstart = MPI_Wtime();
     int iter=0;
     while(true)
     {
-        MPI_Barrier(MPI_COMM_WORLD);
+        MapReduce *mr = new MapReduce(MPI_COMM_WORLD);
+        mr->verbosity = 2;
+        mr->timer = 1;
 
-        for(i=0; i<num_webpages; i++)
+        for(i=0; i<num_pages; i++)
         {
             structformapper sfm;
             sfm.key=i;
-            sfm.pgrank=pageranks[i]
+            sfm.pgrank=pageranks[i];
             int nwords = mr->map(nprocs,mapper1,&sfm);
         }
 
@@ -116,37 +119,44 @@ int main(int narg, char **args)
             dp = dp+ (dp_arr[i]/num_pages);
         }
 
-        for(i=0; i<num_webpages; i++)
+        MPI_Barrier(MPI_COMM_WORLD);
+
+        for(i=0; i<num_pages; i++)
         {
             structformapper sfm;
             sfm.key=i;
-            sfm.pgrank=pageranks[i]
+            sfm.pgrank=pageranks[i];
             int nwords = mr->map(nprocs,mapper,&sfm);
         }
         mr->collate(NULL);
-        for(i=0; i<num_webpages; i++)
+        for(i=0; i<num_pages; i++)
         {
             structforreducer sfr;
             sfr.key=i;
             sfr.pgranks=pageranks; //change - how do we get the intermediate 2D array?????
             int nunique = mr->reduce(reducer,&sfr);
         }
-        mr->gather(0);
-        for(int i=0; i<num_webpages; i++)
+        mr->gather(1);
+        for(int i=0; i<num_pages; i++)
         {
-            pageranks[i] = s*pageranks_up[i] +  (1-s)/num_webpages + s*dp ;
+            pageranks[i] = s*pageranks_up[i] +  (1-s)/num_pages + s*dp;
         }
         if(iter>20)
             break;
         iter++;
-    }
-
- 
+        delete mr;
+    } 
   // double tstop = MPI_Wtime();
 
-    delete mr;
-
     MPI_Finalize();
+
+    double ans = 0.0;
+    for(int i=0; i<num_pages; i++)
+    {
+        cout<<i<<" = "<<pageranks[i]<<endl;
+        ans =ans+ pageranks[i];
+    }
+    cout<<"sum "<<ans;
 }
 
 /* ----------------------------------------------------------------------

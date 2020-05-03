@@ -8,4 +8,4 @@ LINKFLAGS =	-g -O -m64
 USRLIB =	../src/libmrmpi_mac64.a
 SYSLIB =
 
-include Makefile.common
+include Makefile1
