@@ -9,13 +9,12 @@
 
 using namespace MAPREDUCE_NS;
 
-vector<vector<int> > outedges(10000);
-vector<vector<double> > temppageranks(10000);
-vector<double> pageranks(10000);
-// vector<double> dp_arr;
+vector<vector<int> > outedges(100000);
+// vector<vector<double> > temppageranks(100000);
+vector<double> pageranks(100000);
 int num_pages=0;
 
-// void fileread(int, char *, KeyValue *, void *);
+
 
 // struct structformapper
 // {
@@ -31,13 +30,13 @@ int num_pages=0;
 
 void mapper(int itask, KeyValue *kv, void *ptr)//int key, double pgrank)
 {
-    int rank, num_procs;
-    MPI_Comm_size(MPI_COMM_WORLD,&num_procs);
+    int rank, nprocs;
+    MPI_Comm_size(MPI_COMM_WORLD,&nprocs);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    for(int i=((rank*20000)/num_procs); i < (((rank+1)*20000)/num_procs); i++) 
+    for(int i=((rank*num_pages)/nprocs); i < (((rank+1)*num_pages)/nprocs); i++) 
     {
-        double pgi = 0.0;
-        kv->add((char *) &i,sizeof(int),(char *) &pgi,sizeof(double));
+        double val = 0.0;
+        kv->add((char *) &i,sizeof(int),(char *) &val,sizeof(double));
         int n = outedges[i].size();
         if(n!=0)
         {
@@ -69,8 +68,7 @@ void mapper(int itask, KeyValue *kv, void *ptr)//int key, double pgrank)
 //     }
 // }
 
-void reducer(char *key, int keybytes, char *multivalue,
-     int nvalues, int *valuebytes, KeyValue *kv, void *ptr)//int key, vector<double> pgranks)
+void reducer(char *key, int keybytes, char *multivalue, int nvalues, int *valuebytes, KeyValue *kv, void *ptr)//int key, vector<double> pgranks)
 {
     // double new_rank = 0.0f;
     // int n=pgranks.size();
@@ -87,7 +85,6 @@ void reducer(char *key, int keybytes, char *multivalue,
         pgrank =pgrank+ vals[i];
     }
     pageranks[keyy]=pgrank;
-    // kv->add(key,keybytes,(char *) &sum,sizeof(double));
 }
 
 int main(int narg, char **args)
@@ -97,11 +94,12 @@ int main(int narg, char **args)
     int me,nprocs;
     nprocs=2;
     float s=0.85;
-    MPI_Comm_rank(MPI_COMM_WORLD,&me);
+
     MPI_Comm_size(MPI_COMM_WORLD,&nprocs);
+    MPI_Comm_rank(MPI_COMM_WORLD,&me);
 
     ifstream fin;
-    fin.open("bull.txt");
+    fin.open("test/barabasi-20000.txt"); // barabasi-20000
     int a,b;
     while(!fin.eof())
     {
@@ -113,13 +111,13 @@ int main(int narg, char **args)
     fin.close();
 
     double def_pagerank=(1.0/num_pages);
-    // vector<double> temp(num_pages+1, 0.0);
+    vector<double> temp(num_pages+1, 0.0);
     for(int i=0;i<num_pages;i++)
     {
-        // temp[i]=(def_pagerank);
-        pageranks[i]=(def_pagerank);
+        temp[i]=(def_pagerank);
+        // pageranks[i]=(def_pagerank);
     }
-    // pageranks=temp;
+    pageranks=temp;
 
 
     // if (narg <= 1) 
@@ -183,47 +181,49 @@ int main(int narg, char **args)
         for(int i=0; i<num_pages; i++)
         {
             pageranks[i] = (s*pageranks[i]) + (double)((1-s)/num_pages) + s*dp;
-            cout<<i<<" : "<<pageranks[i]<<" = "<<(s*pageranks[i])<<" + "<<(double)((1-s)/num_pages)<<" + "<<s*dp<<endl;
+            // cout<<i<<" : "<<pageranks[i]<<" = "<<(s*pageranks[i])<<" + "<<(double)((1-s)/num_pages)<<" + "<<s*dp<<endl;
         }
+        double ans1 = 0.0;
+        for(int i=0; i<num_pages; i++)
+        {
+            ans1 += pageranks[i];
+
+        }
+        // cout<<me<<" sum "<<ans1<<endl;
+        // for(int i=0; i<num_pages; i++)
+        // {
+        //     pageranks[i]=pageranks[i]/ans1;
+        // }
         if(iter>20)
             break;
         iter++;
         delete mr;
 
-        double ans = 0.0;
-        for(int i=0; i<num_pages; i++)
-        {
-            cout<<i<<" = "<<pageranks[i]<<endl;
-            ans =ans+ pageranks[i];
-        }
-        cout<<"sum "<<ans<<endl;
+
     } 
   // double tstop = MPI_Wtime();
 
     MPI_Finalize();
+
     if(me==0)
     {
+        // double ans1 = 0.0;
+        // for(int i=0; i<num_pages; i++)
+        // {
+        //     ans1 += pageranks[i];
+        // }
+        // for(int i=0; i<num_pages; i++)
+        // {
+        //     pageranks[i]=pageranks[i]/ans1;
+        // }
+
         double ans = 0.0;
         for(int i=0; i<num_pages; i++)
         {
-            cout<<i<<" = "<<pageranks[i]<<endl;
+            // cout<<i<<" = "<<pageranks[i]<<endl;
             ans =ans+ pageranks[i];
         }
         cout<<"sum "<<ans<<endl;
     }
 }
 
-/* ----------------------------------------------------------------------
-   read a file
-   for each word in file, emit key = word, value = NULL
-------------------------------------------------------------------------- */
-
-// void fileread(int itask, KeyValue *key, void *ptr)
-// {
-//     n=outedges[key].size();
-//     for (int i=0;i<n;i++)
-//     {
-//         double temp = value/n;
-//         kv->add(outedges[key][i],sizeof(int),temp,sizeof(int));
-//     }
-// }
