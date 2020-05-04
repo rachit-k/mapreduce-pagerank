@@ -5,7 +5,7 @@ long long num_pages=0;
 
 vector<vector<int> > outedges(100000);
 vector<double> pageranks;
-vector<vector<double> > temppageranks(100000);
+// vector<vector<double> > temppageranks(100000);
 // vector<double> sumlist;
 
 void mapper(MPI_Comm mpi_comm, int nproc, int rank, vector<double> pageranks)
