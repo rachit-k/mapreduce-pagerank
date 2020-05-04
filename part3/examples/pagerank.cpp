@@ -101,7 +101,7 @@ int main(int narg, char **args)
     MPI_Comm_size(MPI_COMM_WORLD,&nprocs);
 
     ifstream fin;
-    fin.open("bull1.txt");
+    fin.open("bull.txt");
     int a,b;
     while(!fin.eof())
     {
@@ -167,7 +167,7 @@ int main(int narg, char **args)
         //     int nwords = mr->map(nprocs,&mapper,&sfm);
         // }
         mr->gather(1);
-        mr->collate(NULL);
+        mr->convert();
 
         int nunique=mr->reduce(reducer,NULL);
 
@@ -183,24 +183,34 @@ int main(int narg, char **args)
         for(int i=0; i<num_pages; i++)
         {
             pageranks[i] = (s*pageranks[i]) + (double)((1-s)/num_pages) + s*dp;
-            // cout<<i<<" : "<<pageranks[i]<<" = "<<(s*pageranks[i])<<" + "<<(double)((1-s)/num_pages)<<" + "<<s*dp<<endl;
+            cout<<i<<" : "<<pageranks[i]<<" = "<<(s*pageranks[i])<<" + "<<(double)((1-s)/num_pages)<<" + "<<s*dp<<endl;
         }
-        if(iter>0)
+        if(iter>20)
             break;
         iter++;
         delete mr;
+
+        double ans = 0.0;
+        for(int i=0; i<num_pages; i++)
+        {
+            cout<<i<<" = "<<pageranks[i]<<endl;
+            ans =ans+ pageranks[i];
+        }
+        cout<<"sum "<<ans<<endl;
     } 
   // double tstop = MPI_Wtime();
 
     MPI_Finalize();
-
-    double ans = 0.0;
-    for(int i=0; i<num_pages; i++)
+    if(me==0)
     {
-        cout<<i<<" = "<<pageranks[i]<<endl;
-        ans =ans+ pageranks[i];
+        double ans = 0.0;
+        for(int i=0; i<num_pages; i++)
+        {
+            cout<<i<<" = "<<pageranks[i]<<endl;
+            ans =ans+ pageranks[i];
+        }
+        cout<<"sum "<<ans<<endl;
     }
-    cout<<"sum "<<ans<<endl;
 }
 
 /* ----------------------------------------------------------------------
