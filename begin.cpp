@@ -270,7 +270,7 @@ int main(int argc, char *argv[])
 
     
 
-    std::cout <<"\nPage Rank analysis MapReduce..." <<std::endl;
+    //std::cout <<"\nPage Rank analysis MapReduce..." <<std::endl;
     std::string filename="test/mytest.txt";
     if(argc>1){
         filename=argv[1];
@@ -293,7 +293,7 @@ int main(int argc, char *argv[])
             max=temp;
         }
     }
-    std::cout<<"File Reading done "<<std::endl;
+    std::cout<<filename<<"\t";
     unsigned long size=max+1;
     global_size=size;
     Ap_calc::size_graph=size;
@@ -327,7 +327,7 @@ int main(int argc, char *argv[])
     fraction=0.85;
     std::chrono::time_point<std::chrono::system_clock> start, end; 
     start = std::chrono::system_clock::now(); 
-    std::cout<<"Starting iterations "<<std::endl;
+    //std::cout<<"Starting iterations "<<std::endl;
     while(num_iterations<max_iterations){
         Ap_calc::job::datasource_type datasource(size);
         Ap_calc::job job(datasource, spec);
@@ -361,7 +361,8 @@ int main(int argc, char *argv[])
     }
     end = std::chrono::system_clock::now(); 
     std::chrono::duration<double> elapsed_seconds = end - start; 
-    std::cout<< "Paralle elapsed time: " << elapsed_seconds.count() << "s\n"; 
+    // std::cout<< "Paralle elapsed time: " << elapsed_seconds.count() << "s\n"; 
+    std::cout<<elapsed_seconds.count() << "\t"; 
     // std::cout<<"After "<<num_iterations+1<<" number of iterations "<<std::endl;
     for(unsigned i =0;i<size;++i){
         probablity[i] = (double)1/size;
@@ -394,7 +395,8 @@ int main(int argc, char *argv[])
     }
     end = std::chrono::system_clock::now(); 
      elapsed_seconds = end - start; 
-    std::cout<< "Serial elapsed time: " << elapsed_seconds.count() << "s\n"; 
+    // std::cout<< "Serial elapsed time: " << elapsed_seconds.count() << "s\n"; 
+     std::cout<<elapsed_seconds.count() << "\n"; 
     return 0;
 }
 
