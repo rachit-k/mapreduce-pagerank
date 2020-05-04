@@ -44,7 +44,7 @@ void mapper(int itask, KeyValue *kv, void *ptr)//int key, double pgrank)
             for(int j =0; j<n; j++)
             {
                 double val=(double)(pageranks[i]/n);
-                kv->add((char *) outedges[i][j],sizeof(int),(char *) &val,sizeof(double));
+                kv->add((char *) &outedges[i][j],sizeof(int),(char *) &val,sizeof(double));
             }
         }
     }
@@ -134,7 +134,7 @@ int main(int narg, char **args)
     while(true)
     {
         MapReduce *mr = new MapReduce(MPI_COMM_WORLD);
-        mr->verbosity = 2;
+        //mr->verbosity = 2;
         mr->timer = 1;
 
         // for(int i=0; i<num_pages; i++)
@@ -178,11 +178,12 @@ int main(int narg, char **args)
         //     int nunique = mr->reduce(&reducer,&sfr);
         // }
         mr->gather(1);
+        MPI_Barrier(MPI_COMM_WORLD);
         for(int i=0; i<num_pages; i++)
         {
             pageranks[i] = (s*pageranks[i]) +  ((1-s)/num_pages) + s*dp;
         }
-        if(iter>20)
+        if(iter>5)
             break;
         iter++;
         delete mr;
