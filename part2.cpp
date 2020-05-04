@@ -270,17 +270,20 @@ int main(int narg, char **args)
             // }
             
         }
-        if(me==0)
+        //if(me==0)
         // cout<<"One iteration done "<<endl;
+
         if(iter>=20)
             break;
         dprod=0;
         iter++;
+        // cout<<"End of one iter for rank "<<me<<" number of iterations is "<<iter<<endl;
     }
+    // cout<<"Out of the loop for rank "<<me<<endl;
     end = std::chrono::system_clock::now(); 
     std::chrono::duration<double> elapsed_seconds = end - start; 
     double sum=0.0;
-
+    
    
     if(me==0)
     {
@@ -291,6 +294,7 @@ int main(int narg, char **args)
     cout<<"Sum "<<sum<<endl;
     std::cout<< "Paralle elapsed time: " << elapsed_seconds.count() << "s\n"; 
     }
+    cout<<"End for rank "<<me<<endl;
     MPI_Finalize();
     return 0;
 }
