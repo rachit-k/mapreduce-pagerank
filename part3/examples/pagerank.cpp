@@ -112,14 +112,14 @@ int main(int narg, char **args)
     num_pages++;
     fin.close();
 
-    double def_pagerank=(double)(1/num_pages);
-    vector<double> temp(num_pages+1, 0.0);
+    double def_pagerank=(1.0/num_pages);
+    // vector<double> temp(num_pages+1, 0.0);
     for(int i=0;i<num_pages;i++)
     {
-        //temp[i]=(def_pagerank);
+        // temp[i]=(def_pagerank);
         pageranks[i]=(def_pagerank);
     }
-    //pageranks=temp;
+    // pageranks=temp;
 
 
     // if (narg <= 1) 
@@ -153,7 +153,6 @@ int main(int narg, char **args)
                dp = dp+ (double)(pageranks[i]/num_pages);
             }
         }
-         //cout<<"dp "<<dp<<endl;
 
         MPI_Barrier(MPI_COMM_WORLD);
 
@@ -184,8 +183,9 @@ int main(int narg, char **args)
         for(int i=0; i<num_pages; i++)
         {
             pageranks[i] = (s*pageranks[i]) + (double)((1-s)/num_pages) + s*dp;
+            // cout<<i<<" : "<<pageranks[i]<<" = "<<(s*pageranks[i])<<" + "<<(double)((1-s)/num_pages)<<" + "<<s*dp<<endl;
         }
-        if(iter>20)
+        if(iter>0)
             break;
         iter++;
         delete mr;
