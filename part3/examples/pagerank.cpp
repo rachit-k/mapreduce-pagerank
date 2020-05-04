@@ -87,19 +87,21 @@ void reducer(char *key, int keybytes, char *multivalue, int nvalues, int *valueb
     pageranks[keyy]=pgrank;
 }
 
-int main(int narg, char **args)
+int main(int argc, char **argv)
 {
-    MPI_Init(&narg,&args);
+    MPI_Init(&argc,&argv);
 
     int me,nprocs;
-    nprocs=2;
+    int max_iters=stoi(argv[2]);
+
     float s=0.85;
 
     MPI_Comm_size(MPI_COMM_WORLD,&nprocs);
     MPI_Comm_rank(MPI_COMM_WORLD,&me);
 
     ifstream fin;
-    fin.open("test/barabasi-20000.txt"); // barabasi-20000
+    fin.open(argv[1]); // test/barabasi-20000.txt
+
     int a,b;
     while(!fin.eof())
     {
@@ -127,13 +129,13 @@ int main(int narg, char **args)
     // }
 
 
-  // double tstart = MPI_Wtime();
+  double tstart = MPI_Wtime();
     int iter=0;
     while(true)
     {
         MapReduce *mr = new MapReduce(MPI_COMM_WORLD);
-        //mr->verbosity = 2;
-        mr->timer = 1;
+        mr->verbosity = 0;
+        mr->timer = 0;
 
         // for(int i=0; i<num_pages; i++)
         // {
@@ -183,25 +185,26 @@ int main(int narg, char **args)
             pageranks[i] = (s*pageranks[i]) + (double)((1-s)/num_pages) + s*dp;
             // cout<<i<<" : "<<pageranks[i]<<" = "<<(s*pageranks[i])<<" + "<<(double)((1-s)/num_pages)<<" + "<<s*dp<<endl;
         }
-        double ans1 = 0.0;
-        for(int i=0; i<num_pages; i++)
-        {
-            ans1 += pageranks[i];
 
-        }
+        // double ans1 = 0.0;
+        // for(int i=0; i<num_pages; i++)
+        // {
+        //     ans1 += pageranks[i];
+        // }
         // cout<<me<<" sum "<<ans1<<endl;
         // for(int i=0; i<num_pages; i++)
         // {
         //     pageranks[i]=pageranks[i]/ans1;
         // }
-        if(iter>20)
+        if(iter>max_iters)
             break;
         iter++;
         delete mr;
 
 
     } 
-  // double tstop = MPI_Wtime();
+  double tstop = MPI_Wtime();
+  cout<<me<<" time "<<tstop-tstart<<endl;
 
     MPI_Finalize();
 
