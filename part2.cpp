@@ -18,7 +18,6 @@ void mapper(MPI_Comm mpi_comm, long long nproc, long long rank, vector<double> p
     long long start=rank;
     for(long long i=start*num_pages/nproc; i<(start+1)*num_pages/nproc; i++)
     {
-        cout<<"At index "<<i<<endl;
         temppageranks[i].push_back(0.0);
       	long long n = outedges[i].size();
       	if(n!=0)
@@ -27,25 +26,25 @@ void mapper(MPI_Comm mpi_comm, long long nproc, long long rank, vector<double> p
             for(long long j =0; j<n; j++)
             {
                 double keyval[]={outedges[i][j], fraction*(double)(pageranks[i]/n)};
-                MPI_Send(&keyval,2, MPI_DOUBLE, i%nproc, 1, MPI_COMM_WORLD);
+                MPI_Send(&keyval,2, MPI_DOUBLE, rank, 1, MPI_COMM_WORLD);
                 //cout<<"Sending to rank "<<i%nproc<<endl;
             }
-            cout<<"Sending key "<<i<<" for rank "<<i%nproc<<endl;
+            
             // cout<<"Value sent was "<<((1-fraction)/num_pages)+ (fraction*dprod/num_pages)<<endl;
             double keyvaltemp[]={i*1.0,((1-fraction)/num_pages)+ (fraction*dprod/num_pages)};
-            MPI_Send(&keyvaltemp,2, MPI_DOUBLE, i%nproc, 1, MPI_COMM_WORLD);
+            MPI_Send(&keyvaltemp,2, MPI_DOUBLE, rank, 1, MPI_COMM_WORLD);
+            //cout<<"@Sending key "<<i<<" for rank "<<rank<<endl;
         }
         else{
-            cout<<"Sending key "<<i<<" for rank "<<i%nproc<<endl;
+            // cout<<"Sending key "<<i<<" for rank "<<i%nproc<<endl;
             double keyvaltemp[]={i*1.0, ((1-fraction)/num_pages)+ (fraction*dprod/num_pages)};
-            MPI_Send(&keyvaltemp,2, MPI_DOUBLE, i%nproc, 1, MPI_COMM_WORLD);
+            MPI_Send(&keyvaltemp,2, MPI_DOUBLE, rank, 1, MPI_COMM_WORLD);
 
         }
 
 
     }
     //can remove
-    MPI_Barrier(MPI_COMM_WORLD);
     double keyval[]={-1.0, -1.0};
     MPI_Send(&keyval,2, MPI_DOUBLE, rank, 1, MPI_COMM_WORLD);
     //cout<<"End Sending to rank "<<rank<<endl;
@@ -86,12 +85,16 @@ void semireducer(MPI_Comm mpi_comm, long long nprocs, vector<double> &pagerank, 
         while(true)
         {
         double keyval[]={0.0, 0.0};
-        //cout<<"Here receiving  for rank "<<rank<<endl;
+        // if(rank==1)
+        // cout<<"Here receiving  for rank "<<rank<<endl;
 
         MPI_Recv(&keyval[0],2, MPI_DOUBLE, MPI_ANY_SOURCE, 1, mpi_comm, 0);
-        cout<<"Val received is "<<keyval[0]<<" and "<<keyval[1]<<" for rank "<<rank<<endl;
+        // if(rank==1)
+        // cout<<"Val received is "<<keyval[0]<<" and "<<keyval[1]<<" for rank "<<rank<<endl;
         if(keyval[0]<-0.5)
+        {
             break;
+        }
         reduced_sum[(int)keyval[0]]+=keyval[1];
         }
        
@@ -229,14 +232,14 @@ int main(int narg, char **args)
         //cout<<"Beyonf the barrier "<<endl;
         reducerd(MPI_COMM_WORLD, nprocs, pageranks, me, num_pages);
         MPI_Barrier(MPI_COMM_WORLD);
-        cout<<"Dprod is "<<dprod/num_pages<<endl;
+        //cout<<"Dprod is "<<dprod/num_pages<<endl;
         mapper(MPI_COMM_WORLD, nprocs, me, pageranks);
 
         //cout<<"@here "<<me<<endl;
         MPI_Barrier(MPI_COMM_WORLD);
         semireducer(MPI_COMM_WORLD, nprocs, pageranks, me, num_pages);
         MPI_Barrier(MPI_COMM_WORLD);
-        cout<<"Reduced sum for rank "<<me<<" is "<<reduced_sum[1]<<endl;
+        //cout<<"Reduced sum for rank "<<me<<" is "<<reduced_sum[1]<<endl;
         //cout<<"@Beyonf the barrier "<<endl;
         reducer(MPI_COMM_WORLD, nprocs, pageranks, me, num_pages);
         //cout<<"@!!!!Beyonf the barrier "<<endl;
@@ -246,26 +249,28 @@ int main(int narg, char **args)
         {
             pageranks[i]=reduced_sum[i];
             sum=sum+reduced_sum[i];
-            if(me==0)
-            {
-            cout<<i<<" = "<<pageranks[i]<<endl;
+            // if(me==0)
+            // {
+            // cout<<i<<" = "<<pageranks[i]<<endl;
             
-            }
+            // }
             
         }
-        if(me==0)
-        cout<<"Sum "<<sum<<endl;
-        if(iter>=0)
+        // if(me==0)
+        // cout<<"Sum "<<sum<<endl;
+        if(iter>=20)
             break;
         dprod=0;
         iter++;
     }
+    double sum=0.0;
     for(int i=0; i<num_pages; i++)
-        {
+        {   sum=sum+pageranks[i];
             if(me==0)
                 cout<<i<<" = "<<pageranks[i]<<endl;
         }
-
+    if(me==0)
+    cout<<"Sum "<<sum;
     MPI_Finalize();
     return 0;
 }
