@@ -17,17 +17,17 @@ int num_pages=0;
 
 // void fileread(int, char *, KeyValue *, void *);
 
-struct structformapper
-{
-    int key;
-    double pgrank;
-};
+// struct structformapper
+// {
+//     int key;
+//     double pgrank;
+// };
 
-struct structforreducer
-{
-    int key;
-    vector<double> pgranks;
-};
+// struct structforreducer
+// {
+//     int key;
+//     vector<double> pgranks;
+// };
 
 void mapper(int itask, KeyValue *kv, void *ptr)//int key, double pgrank)
 {
@@ -79,14 +79,14 @@ void reducer(char *key, int keybytes, char *multivalue,
     //     new_rank = new_rank+ pgranks[i];
     // }
     // pageranks[key] = new_rank;
-    int t = *(int *) key;
-    double* s = (double *) multivalue;
-    double sum = 0;
+    int keyy = *(int *) key;
+    double* vals = (double *) multivalue;
+    double pgrank = 0;
     for(int i = 0; i < nvalues; i++)
     {
-        sum += s[i];
+        pgrank =pgrank+ vals[i];
     }
-    pageranks[t]=sum;
+    pageranks[keyy]=pgrank;
     // kv->add(key,keybytes,(char *) &sum,sizeof(double));
 }
 
@@ -101,7 +101,7 @@ int main(int narg, char **args)
     MPI_Comm_size(MPI_COMM_WORLD,&nprocs);
 
     ifstream fin;
-    fin.open("bull.txt");
+    fin.open("bull1.txt");
     int a,b;
     while(!fin.eof())
     {
@@ -112,7 +112,7 @@ int main(int narg, char **args)
     num_pages++;
     fin.close();
 
-    double def_pagerank=1/num_pages;
+    double def_pagerank=(double)(1/num_pages);
     vector<double> temp(num_pages+1, 0.0);
     for(int i=0;i<num_pages;i++)
     {
@@ -150,9 +150,10 @@ int main(int narg, char **args)
         {    
             if(outedges[i].size()==0)
             {
-               dp = dp+ (pageranks[i]/num_pages);
+               dp = dp+ (double)(pageranks[i]/num_pages);
             }
         }
+         //cout<<"dp "<<dp<<endl;
 
         MPI_Barrier(MPI_COMM_WORLD);
 
@@ -166,6 +167,7 @@ int main(int narg, char **args)
         //     sfm.pgrank=pageranks[i];
         //     int nwords = mr->map(nprocs,&mapper,&sfm);
         // }
+        mr->gather(1);
         mr->collate(NULL);
 
         int nunique=mr->reduce(reducer,NULL);
@@ -177,13 +179,13 @@ int main(int narg, char **args)
         //     sfr.pgranks=pageranks; //change - how do we get the intermediate 2D array?????
         //     int nunique = mr->reduce(&reducer,&sfr);
         // }
-        mr->gather(1);
-        MPI_Barrier(MPI_COMM_WORLD);
+
+        // MPI_Barrier(MPI_COMM_WORLD);
         for(int i=0; i<num_pages; i++)
         {
-            pageranks[i] = (s*pageranks[i]) +  ((1-s)/num_pages) + s*dp;
+            pageranks[i] = (s*pageranks[i]) + (double)((1-s)/num_pages) + s*dp;
         }
-        if(iter>5)
+        if(iter>20)
             break;
         iter++;
         delete mr;
@@ -198,7 +200,7 @@ int main(int narg, char **args)
         cout<<i<<" = "<<pageranks[i]<<endl;
         ans =ans+ pageranks[i];
     }
-    cout<<"sum "<<ans;
+    cout<<"sum "<<ans<<endl;
 }
 
 /* ----------------------------------------------------------------------
