@@ -6,47 +6,173 @@ long long num_pages=0;
 vector<vector<int> > outedges(100000);
 vector<double> pageranks;
 vector<vector<double> > temppageranks(100000);
+double* reduced_sum;
+int* d_vec;
+double dprod=0.0;
+double fraction=0.85;
 // vector<double> sumlist;
-
-void mapper(MPI_Comm mpi_comm, int nproc, int rank, vector<double> pageranks)
+// make the destination change for each value
+void mapper(MPI_Comm mpi_comm, long long nproc, long long rank, vector<double> pageranks)
 {
-    int batchsize = num_pages/(nproc);
-    
-
-    for(long long i=0; i<num_pages; i++)
+    long long batchsize = num_pages/(nproc);
+    long long start=rank;
+    for(long long i=start*num_pages/nproc; i<(start+1)*num_pages/nproc; i++)
     {
+        cout<<"At index "<<i<<endl;
         temppageranks[i].push_back(0.0);
-      	int n = outedges[i].size();
+      	long long n = outedges[i].size();
       	if(n!=0)
         {
-            long start=rank;
-            for(int j =start*n/nproc; j<(start+1)*n/nproc; j++)
+            
+            for(long long j =0; j<n; j++)
             {
-                temppageranks[outedges[i][j]].push_back( (double)(pageranks[i]/n));
+                double keyval[]={outedges[i][j], fraction*(double)(pageranks[i]/n)};
+                MPI_Send(&keyval,2, MPI_DOUBLE, i%nproc, 1, MPI_COMM_WORLD);
+                //cout<<"Sending to rank "<<i%nproc<<endl;
             }
-            MPI_Send(&temppageranks,batchsize, MPI_DOUBLE, 0, 1, mpi_comm);
+            cout<<"Sending key "<<i<<" for rank "<<i%nproc<<endl;
+            // cout<<"Value sent was "<<((1-fraction)/num_pages)+ (fraction*dprod/num_pages)<<endl;
+            double keyvaltemp[]={i*1.0,((1-fraction)/num_pages)+ (fraction*dprod/num_pages)};
+            MPI_Send(&keyvaltemp,2, MPI_DOUBLE, i%nproc, 1, MPI_COMM_WORLD);
         }
+        else{
+            cout<<"Sending key "<<i<<" for rank "<<i%nproc<<endl;
+            double keyvaltemp[]={i*1.0, ((1-fraction)/num_pages)+ (fraction*dprod/num_pages)};
+            MPI_Send(&keyvaltemp,2, MPI_DOUBLE, i%nproc, 1, MPI_COMM_WORLD);
+
+        }
+
+
     }
+    //can remove
+    MPI_Barrier(MPI_COMM_WORLD);
+    double keyval[]={-1.0, -1.0};
+    MPI_Send(&keyval,2, MPI_DOUBLE, rank, 1, MPI_COMM_WORLD);
+    //cout<<"End Sending to rank "<<rank<<endl;
+    // cout<<"Sent for rank "<<rank<<endl;
 }
 
-void reducer(MPI_Comm mpi_comm, int nprocs, vector<double> &pagerank, int rank)
+void mapperd(MPI_Comm mpi_comm, long long nproc, long long rank, vector<double> pageranks)
 {
-    int n = num_pages/(nprocs);
-    vector<double> pg(n,0.0f);
-    vector<double> temppageranks(n,0.0f);
-    if(rank==0)
+    long long batchsize = num_pages/(nproc);
+    long long start=rank;
+    for(long long i=start*num_pages/nproc; i<(start+1)*num_pages/nproc; i++)
     {
+                double keyval[]={0, d_vec[i]*pageranks[i]};
+                //cout<<"Value getting sent is "<<pageranks[i]<<" and "<<d_vec[i]<<" for i= "<<i<<endl;
+                MPI_Send(&keyval,2, MPI_DOUBLE, i%nproc, 1, MPI_COMM_WORLD);
+                //cout<<"Sending to rank "<<i%nproc<<endl;
+    }
+    //can remove
+    MPI_Barrier(MPI_COMM_WORLD);
+    double keyval[]={-1.0, -1.0};
+    MPI_Send(&keyval,2, MPI_DOUBLE, rank, 1, MPI_COMM_WORLD);
+    //cout<<"End Sending to rank "<<rank<<endl;
+    // cout<<"Sent for rank "<<rank<<endl;
+}
+
+void semireducer(MPI_Comm mpi_comm, long long nprocs, vector<double> &pagerank, long long rank, long long numpages)
+{
+    long long batchsize = num_pages/(nprocs);
+    vector<double> pg(batchsize,0.0f);
+    vector<double> temppageranks(batchsize,0.0f);
+    for(int i=0;i<numpages;++i){
+        reduced_sum[i]=0.0;
+    }
+    //cout<<"In semireduced for rank "<<rank<<endl;
     for (int j = 0; j < nprocs; j++) 
     {
-        cout<<"Here receiving from process "<<j<<" for rank "<<rank<<endl;
-        MPI_Recv(&pg[0],n, MPI_DOUBLE, j, 1, mpi_comm, 0);
-        for(int i =0; i<n; i++)
+        if(rank==j)
+        while(true)
         {
-          temppageranks[i] += pg[i];
+        double keyval[]={0.0, 0.0};
+        //cout<<"Here receiving  for rank "<<rank<<endl;
+
+        MPI_Recv(&keyval[0],2, MPI_DOUBLE, MPI_ANY_SOURCE, 1, mpi_comm, 0);
+        cout<<"Val received is "<<keyval[0]<<" and "<<keyval[1]<<" for rank "<<rank<<endl;
+        if(keyval[0]<-0.5)
+            break;
+        reduced_sum[(int)keyval[0]]+=keyval[1];
+        }
+       
+    }
+    //cout<<"Reduced sum is "<<reduced_sum[0]<<" and "<<reduced_sum[1]<<" for rank "<<rank<<endl;
+    //cout<<" Done semi reduce"<<endl;
+    MPI_Barrier(MPI_COMM_WORLD);
+    if(rank!=0)
+    MPI_Send(reduced_sum,num_pages, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD);
+    
+}
+void semireducerd(MPI_Comm mpi_comm, long long nprocs, vector<double> &pagerank, long long rank, long long numpages)
+{
+    //cout<<"In semireduced for rank "<<rank<<endl;
+    for (int j = 0; j < nprocs; j++) 
+    {
+        if(rank==j)
+        while(true)
+        {
+        double keyval[]={0.0, 0.0};
+        //cout<<"Here receiving  for rank "<<rank<<endl;
+
+        MPI_Recv(&keyval[0],2, MPI_DOUBLE, MPI_ANY_SOURCE, 1, mpi_comm, 0);
+        //cout<<"Val received is "<<keyval[0]<<" and "<<keyval[1]<<" for rank "<<rank<<endl;
+        if(keyval[0]<0)
+            break;
+        dprod+=keyval[1];
+        }
+       
+    }
+    //cout<<"Value to be sent isis "<<dprod<<" for rank "<<rank<<endl;
+    //cout<<" Done semi reduce"<<endl;
+    MPI_Barrier(MPI_COMM_WORLD);
+    if(rank!=0)
+    MPI_Send(&dprod,1, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD);
+    
+}
+void reducer(MPI_Comm mpi_comm, long long nprocs, vector<double> &pagerank, long long rank, long long numpages)
+{
+    if(rank==0)
+    {
+    double temp_reduced_sum[numpages];
+    for(int i=0;i<numpages;++i){
+        temp_reduced_sum[i]=0.0;
+    }
+    for (int j = 1; j < nprocs; j++) 
+    {
+        //cout<<"Val received is "<<temp_reduced_sum[0]<<" and "<<temp_reduced_sum[1]<<" for rank "<<j<<endl;
+        MPI_Recv(temp_reduced_sum,num_pages, MPI_DOUBLE, j, 1, mpi_comm, 0);
+        //cout<<"Val received is "<<temp_reduced_sum[0]<<" and "<<temp_reduced_sum[1]<<" for rank "<<j<<endl;
+        for(int i=0;i<numpages;++i){
+            reduced_sum[i]+=temp_reduced_sum[i];
         }
     }
-    pagerank =  temppageranks;
     }
+    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Bcast(reduced_sum, num_pages, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    
+    return;
+
+
+    
+}
+void reducerd(MPI_Comm mpi_comm, long long nprocs, vector<double> &pagerank, long long rank, long long numpages)
+{
+    double temp_dprod=0.0;
+    //cout<<"Initially dprod is "<<dprod<<" for rank "<<rank<<endl;
+    if(rank==0)
+    for (int j = 1; j < nprocs; j++) 
+    {
+        MPI_Recv(&temp_dprod,2, MPI_DOUBLE, j, 1, mpi_comm, 0);
+        //cout<<"Val received is "<<temp_dprod<<" for rank "<<j<<endl;
+        dprod+=temp_dprod;
+    }
+    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Bcast(&dprod, 1, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+    //cout<<"dprod is "<<dprod<<" for rank "<<rank<<endl;
+    return;
+
+
+    
 }
 
 int main(int narg, char **args) 
@@ -59,8 +185,8 @@ int main(int narg, char **args)
     float s=0.85;
 
     ifstream fin;
-    fin.open("test/bull.txt");
-    int a,b;
+    fin.open("test/mytest.txt");
+    long long a,b;
     while(!fin.eof())
     {
         fin>>a>>b;
@@ -69,14 +195,23 @@ int main(int narg, char **args)
     }
     num_pages++;
     fin.close();
-
+    d_vec=new int[num_pages];
+    reduced_sum=new double[num_pages];
     double def_pagerank=1.0/num_pages;
-    vector<double> temp(num_pages+1, 0.0);
-    vector<double> temp2(num_pages+1, 0.0);
+    vector<double> temp(num_pages, 0.0);
+    vector<double> temp2(num_pages, 0.0);
     for(int i=0;i<num_pages;i++)
     {
         temp[i]=(def_pagerank);
+        if(outedges[i].size()==0)
+            d_vec[i]=1;
+        else
+        {
+            d_vec[i]=0;
+        }
+        
     }
+
     pageranks=temp;
 
     MPI_Comm_rank(MPI_COMM_WORLD,&me);
@@ -85,23 +220,51 @@ int main(int narg, char **args)
     int iter=0;
     while(true)
     {
-        mapper(MPI_COMM_WORLD, nprocs, me, pageranks);
+        mapperd(MPI_COMM_WORLD, nprocs, me, pageranks);
 
-        cout<<"here "<<me<<endl;
+        //cout<<"here "<<me<<endl;
+        MPI_Barrier(MPI_COMM_WORLD);
+        semireducerd(MPI_COMM_WORLD, nprocs, pageranks, me, num_pages);
         MPI_Barrier(MPI_COMM_WORLD);
         //cout<<"Beyonf the barrier "<<endl;
-        reducer(MPI_COMM_WORLD, nprocs, pageranks, me);
+        reducerd(MPI_COMM_WORLD, nprocs, pageranks, me, num_pages);
+        MPI_Barrier(MPI_COMM_WORLD);
+        cout<<"Dprod is "<<dprod/num_pages<<endl;
+        mapper(MPI_COMM_WORLD, nprocs, me, pageranks);
 
+        //cout<<"@here "<<me<<endl;
+        MPI_Barrier(MPI_COMM_WORLD);
+        semireducer(MPI_COMM_WORLD, nprocs, pageranks, me, num_pages);
+        MPI_Barrier(MPI_COMM_WORLD);
+        cout<<"Reduced sum for rank "<<me<<" is "<<reduced_sum[1]<<endl;
+        //cout<<"@Beyonf the barrier "<<endl;
+        reducer(MPI_COMM_WORLD, nprocs, pageranks, me, num_pages);
+        //cout<<"@!!!!Beyonf the barrier "<<endl;
+        MPI_Barrier(MPI_COMM_WORLD);
+        double sum=0.0;
         for(int i=0; i<num_pages; i++)
         {
+            pageranks[i]=reduced_sum[i];
+            sum=sum+reduced_sum[i];
+            if(me==0)
+            {
             cout<<i<<" = "<<pageranks[i]<<endl;
+            
+            }
+            
         }
-        vector<vector<double> > tempassign(100000);
-        temppageranks=tempassign;
+        if(me==0)
+        cout<<"Sum "<<sum<<endl;
         if(iter>=0)
             break;
+        dprod=0;
         iter++;
     }
+    for(int i=0; i<num_pages; i++)
+        {
+            if(me==0)
+                cout<<i<<" = "<<pageranks[i]<<endl;
+        }
 
     MPI_Finalize();
     return 0;
