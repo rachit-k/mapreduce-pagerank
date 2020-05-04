@@ -363,7 +363,6 @@ int main(int argc, char *argv[])
     std::chrono::duration<double> elapsed_seconds = end - start; 
     std::cout<< "Paralle elapsed time: " << elapsed_seconds.count() << "s\n"; 
     // std::cout<<"After "<<num_iterations+1<<" number of iterations "<<std::endl;
-    //     print_prob();
     for(unsigned i =0;i<size;++i){
         probablity[i] = (double)1/size;
 
