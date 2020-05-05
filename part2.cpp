@@ -213,6 +213,7 @@ int main(int narg, char **args)
     }
     num_pages++;
     fin.close();
+
     d_vec=new int[num_pages];
     reduced_sum=new double[num_pages];
     double def_pagerank=1.0/num_pages;
@@ -285,16 +286,18 @@ int main(int narg, char **args)
     end = std::chrono::system_clock::now(); 
     std::chrono::duration<double> elapsed_seconds = end - start; 
     double sum=0.0;
-    
+
    
     if(me==0)
     {
      for(int i=0; i<num_pages; i++)
         {   sum=sum+pageranks[i];
-                cout<<i<<" = "<<pageranks[i]<<endl;
+                // cout<<i<<" = "<<pageranks[i]<<endl;
         }
-    cout<<"Sum "<<sum<<endl;
-    std::cout<< "Paralle elapsed time: " << elapsed_seconds.count() << "s\n"; 
+    // cout<<"Sum "<<sum<<endl;
+    // std::cout<< "Parallel elapsed time: " << elapsed_seconds.count() << "s\n"; 
+    std::cout<<filename<<"\t";
+    std::cout<<elapsed_seconds.count()<<"\n"; 
     }
     // cout<<"End for rank "<<me<<endl;
     MPI_Finalize();
