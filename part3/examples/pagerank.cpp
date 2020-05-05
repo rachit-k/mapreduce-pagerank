@@ -183,7 +183,7 @@ int main(int argc, char **argv)
         for(int i=0; i<num_pages; i++)
         {
             pageranks[i] = (s*pageranks[i]) + (double)((1-s)/num_pages) + s*dp;
-            // cout<<i<<" : "<<pageranks[i]<<" = "<<(s*pageranks[i])<<" + "<<(double)((1-s)/num_pages)<<" + "<<s*dp<<endl;
+            cout<<i<<" : "<<pageranks[i]<<" = "<<(s*pageranks[i])<<" + "<<(double)((1-s)/num_pages)<<" + "<<s*dp<<endl;
         }
 
         // double ans1 = 0.0;
