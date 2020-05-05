@@ -9,9 +9,9 @@
 
 using namespace MAPREDUCE_NS;
 
-vector<vector<int> > outedges(100000);
+std::vector<std::vector<int> > outedges(100000);
 // vector<vector<double> > temppageranks(100000);
-vector<double> pageranks(100000);
+std::vector<double> pageranks(100000);
 int num_pages=0;
 
 
@@ -92,14 +92,15 @@ int main(int argc, char **argv)
     MPI_Init(&argc,&argv);
 
     int me,nprocs;
-    int max_iters=stoi(argv[2]);
+    int max_iters=std::stoi(argv[2]);
 
     float s=0.85;
 
     MPI_Comm_size(MPI_COMM_WORLD,&nprocs);
     MPI_Comm_rank(MPI_COMM_WORLD,&me);
 
-    ifstream fin;
+    std::ifstream fin;
+    // std::cout<<"About to File read"<<std::endl;
     fin.open(argv[1]); // test/barabasi-20000.txt
 
     int a,b;
@@ -107,13 +108,14 @@ int main(int argc, char **argv)
     {
         fin>>a>>b;
         outedges[a].push_back(b);
-        num_pages = max(num_pages,max(a,b));
+        num_pages = std::max(num_pages,std::max(a,b));
     }
     num_pages++;
+    // std::cout<<"File read"<<std::endl;
     fin.close();
 
     double def_pagerank=(1.0/num_pages);
-    vector<double> temp(num_pages+1, 0.0);
+    std::vector<double> temp(num_pages+1, 0.0);
     for(int i=0;i<num_pages;i++)
     {
         temp[i]=(def_pagerank);
@@ -153,7 +155,10 @@ int main(int argc, char **argv)
                dp = dp+ (double)(pageranks[i]/num_pages);
             }
         }
-
+        if(me==0)
+        {
+            std::cout<<"dp is "<<dp<<std::endl;
+        }
         MPI_Barrier(MPI_COMM_WORLD);
 
 
@@ -180,10 +185,13 @@ int main(int argc, char **argv)
         // }
 
         // MPI_Barrier(MPI_COMM_WORLD);
+        MPI_Bcast(&pageranks, num_pages, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+        std::cout<<"here for pagerank "<<me<<" size is "<<pageranks.size()<<std::endl;
         for(int i=0; i<num_pages; i++)
         {
+            std::cout<<"Here at rank "<<me<<" for "<<i<<"  "<<pageranks[i]<<std::endl;
             pageranks[i] = (s*pageranks[i]) + (double)((1-s)/num_pages) + s*dp;
-            // cout<<i<<" : "<<pageranks[i]<<" = "<<(s*pageranks[i])<<" + "<<(double)((1-s)/num_pages)<<" + "<<s*dp<<endl;
+            std::cout<<i<<" : "<<pageranks[i]<<" = "<<(s*pageranks[i])<<" + "<<(double)((1-s)/num_pages)<<" + "<<s*dp<<" for rank"<<me<<std::endl;
         }
 
         // double ans1 = 0.0;
@@ -204,7 +212,7 @@ int main(int argc, char **argv)
 
     } 
   double tstop = MPI_Wtime();
-  cout<<me<<" time "<<tstop-tstart<<endl;
+  std::cout<<me<<" time "<<tstop-tstart<<std::endl;
 
     MPI_Finalize();
 
@@ -223,10 +231,10 @@ int main(int argc, char **argv)
         double ans = 0.0;
         for(int i=0; i<num_pages; i++)
         {
-            // cout<<i<<" = "<<pageranks[i]<<endl;
+            std::cout<<i<<" = "<<pageranks[i]<<std::endl;
             ans =ans+ pageranks[i];
         }
-        cout<<"sum "<<ans<<endl;
+        std::cout<<"sum "<<ans<<std::endl;
     }
 }
 
