@@ -11,8 +11,8 @@ using namespace MAPREDUCE_NS;
 
 std::vector<std::vector<int> > outedges(100000);
 // vector<vector<double> > temppageranks(100000);
-std::vector<double> pageranks(100000);
-// double *pageranks=NULL;
+//std::vector<double> pageranks(100000);
+double *pageranks=NULL;
 int num_pages=0;
 
 
@@ -114,7 +114,7 @@ int main(int argc, char **argv)
     num_pages++;
     // std::cout<<"File read"<<std::endl;
     fin.close();
-
+    pageranks=new double[num_pages];
     double def_pagerank=(1.0/num_pages);
     std::vector<double> temp(num_pages+1, 0.0);
     for(int i=0;i<num_pages;i++)
@@ -154,10 +154,10 @@ int main(int argc, char **argv)
                dp = dp+ (double)(pageranks[i]/num_pages);
             }
         }
-        if(me==0)
-        {
-            std::cout<<"dp is "<<dp<<std::endl;
-        }
+        // if(me==0)
+        // {
+        //     std::cout<<"dp is "<<dp<<std::endl;
+        // }
         MPI_Barrier(MPI_COMM_WORLD);
         MapReduce *mr = new MapReduce(MPI_COMM_WORLD);
         mr->verbosity = 0;
@@ -187,15 +187,14 @@ int main(int argc, char **argv)
         //     int nunique = mr->reduce(&reducer,&sfr);
         // }
 
-        // MPI_Barrier(MPI_COMM_WORLD);
-        // MPI_Bcast(&pageranks, num_pages, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-        // MPI_Barrier(MPI_COMM_WORLD);
-        // std::cout<<"here for pagerank "<<me<<" size is "<<pageranks.size()<<std::endl;
+        MPI_Bcast(pageranks, num_pages, MPI_DOUBLE, 0, MPI_COMM_WORLD);
+        MPI_Barrier(MPI_COMM_WORLD);
+        //std::cout<<"here for pagerank at "<<me<<" size is "<<pageranks[0]<<std::endl;
         for(int i=0; i<num_pages; i++)
         {
             // std::cout<<"Here at rank "<<me<<" for "<<i<<"  "<<pageranks[i]<<std::endl;
             pageranks[i] = (s*pageranks[i]) + (double)((1-s)/num_pages) + s*dp;
-            std::cout<<i<<" : "<<pageranks[i]<<" = "<<(s*pageranks[i])<<" + "<<(double)((1-s)/num_pages)<<" + "<<s*dp<<" for rank"<<me<<std::endl;
+            //std::cout<<i<<" : "<<pageranks[i]<<" = "<<(s*pageranks[i])<<" + "<<(double)((1-s)/num_pages)<<" + "<<s*dp<<" for rank"<<me<<std::endl;
         }
 
         // double ans1 = 0.0;
