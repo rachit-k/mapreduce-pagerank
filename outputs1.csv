@@ -7,7 +7,7 @@ test/barabasi-60000.txt	21.2524	16.0938
 test/barabasi-70000.txt	25.2047	18.7759
 test/barabasi-80000.txt	30.175	21.3629
 test/barabasi-90000.txt	31.3899	23.5998
-test/barabasi-10000.txt	0.01116	0.000454
+test/barabasi-100000.txt	36.4017	26.3139
 test/bull.txt	0.011811	0.001378
 test/chvatal.txt	0.014829	0.003285
 test/coxeter.txt	0.020377	0.007886
