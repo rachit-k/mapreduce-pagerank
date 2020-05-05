@@ -93,7 +93,8 @@ int main(int argc, char **argv)
     MPI_Init(&argc,&argv);
 
     int me,nprocs;
-    int max_iters=std::stoi(argv[2]);
+    int max_iters=20;
+    // std::stoi(argv[2]);
 
     float s=0.85;
 
@@ -103,9 +104,10 @@ int main(int argc, char **argv)
     std::ifstream fin;
     // std::cout<<"About to File read"<<std::endl;
     string filename=argv[1];
+    string outfile=argv[2];
     fin.open(filename); // test/barabasi-20000.txt
     if (!fin) {
-        std::cout << "Unable to open file";
+        std::cout << "Unable to open input file";
         exit(1); // terminate with error
     }
     int a,b;
@@ -236,16 +238,18 @@ int main(int argc, char **argv)
         // {
         //     pageranks[i]=pageranks[i]/ans1;
         // }
-
+        ofstream fout;
+        fout.open(outfile);
         double ans = 0.0;
         for(int i=0; i<num_pages; i++)
         {
-            // std::cout<<i<<" = "<<pageranks[i]<<std::endl;
+            fout<<i<<" = "<<pageranks[i]<<std::endl;
             ans =ans+ pageranks[i];
         }
-        // std::cout<<"sum "<<ans<<std::endl;
-        std::cout<<filename<<"\t";
-        std::cout<<tstop-tstart<<"\n"; 
+        fout<<"sum "<<ans<<std::endl;
+        fout.close();
+        // std::cout<<filename<<"\t";
+        // std::cout<<tstop-tstart<<"\n"; 
     }
 
 

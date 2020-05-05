@@ -9,13 +9,13 @@ USRLIB =	../src/libmrmpi_mac.a
 SYSLIB =
 
 
-all:	pagerank
+all:	mr-pr-mpi-base
 
-pagerank:	pagerank.o $(USRLIB)
-	$(LINK) $(LINKFLAGS) pagerank.o $(USRLIB) $(SYSLIB) -o pagerank
+mr-pr-mpi-base:	mr-pr-mpi-base.o $(USRLIB)
+	$(LINK) $(LINKFLAGS) mr-pr-mpi-base.o $(USRLIB) $(SYSLIB) -o mr-pr-mpi-base
 
 clean:
-	rm *.o pagerank
+	rm *.o mr-pr-mpi-base
 
 # Rules
 

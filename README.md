@@ -12,6 +12,6 @@
 
 ## Part3:
 ### Compile
-```make -f Makefile1.common pagerank```
+```make all```
 ### Run
-```mpirun -np 2 pagerank```
+```./mr-pr-mpi-base.sh {<input_filename>} {<output_filename>}```

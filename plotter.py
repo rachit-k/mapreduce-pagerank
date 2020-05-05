@@ -3,12 +3,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 data = pd.read_csv("outputs2.csv", header=None, sep='\t')
 print(data)
-flag=True
+flag=False
 data= data.iloc[:, 1:3]
 data=np.array(data)
 print(data)
 print(data.shape)
-flag=True
+flag=False
 parallel=np.zeros((int(data.shape[0]/2), 1))
 serial=np.zeros((int(data.shape[0]/2), 1))
 if(flag):
@@ -31,6 +31,7 @@ plt.xlabel('Bench-mark id')
 plt.ylabel('Time taken in seconds')
 plt.title("Time taken vs Benchmark id ")
 plt.legend()
+plt.savefig("partb2.png",bbox_inches="tight")
 plt.show()
 speed_up=serial/parallel
 plt.plot(xx, one,  color='red', label='Time by parallel version')
@@ -39,4 +40,5 @@ plt.xlabel('Bench-mark id')
 plt.ylabel('Speed up ')
 plt.title("Speed up vs Benchmark id ")
 plt.legend(loc=1)
+plt.savefig("speeduppartb2.png",bbox_inches="tight")
 plt.show()
