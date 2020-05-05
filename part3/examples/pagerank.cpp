@@ -102,8 +102,12 @@ int main(int argc, char **argv)
 
     std::ifstream fin;
     // std::cout<<"About to File read"<<std::endl;
-    fin.open(argv[1]); // test/barabasi-20000.txt
-
+    string filename=argv[1];
+    fin.open(filename); // test/barabasi-20000.txt
+    if (!fin) {
+        std::cout << "Unable to open file";
+        exit(1); // terminate with error
+    }
     int a,b;
     while(!fin.eof())
     {
@@ -116,7 +120,7 @@ int main(int argc, char **argv)
     fin.close();
     pageranks=new double[num_pages];
     double def_pagerank=(1.0/num_pages);
-    std::vector<double> temp(num_pages+1, 0.0);
+    // std::vector<double> temp(num_pages+1, 0.0);
     for(int i=0;i<num_pages;i++)
     {
         // temp[i]=(def_pagerank);
@@ -145,7 +149,7 @@ int main(int argc, char **argv)
         //     sfm.pgrank=pageranks[i];
         //     int nwords = mr->map(nprocs,&mapper1,&sfm);
         // }
-        MPI_Barrier(MPI_COMM_WORLD);
+        // MPI_Barrier(MPI_COMM_WORLD);
         double dp=0.0;
         for(int i=0; i<num_pages; i++)
         {    
@@ -177,8 +181,8 @@ int main(int argc, char **argv)
         mr->convert();
 
         int nunique=mr->reduce(reducer,NULL);
-        mr->broadcast(0);
-        MPI_Barrier(MPI_COMM_WORLD);
+        // mr->broadcast(0);
+        // MPI_Barrier(MPI_COMM_WORLD);
         // for(int i=0; i<num_pages; i++)
         // {
         //     structforreducer sfr;
@@ -188,7 +192,7 @@ int main(int argc, char **argv)
         // }
 
         MPI_Bcast(pageranks, num_pages, MPI_DOUBLE, 0, MPI_COMM_WORLD);
-        MPI_Barrier(MPI_COMM_WORLD);
+        // MPI_Barrier(MPI_COMM_WORLD);
         //std::cout<<"here for pagerank at "<<me<<" size is "<<pageranks[0]<<std::endl;
         for(int i=0; i<num_pages; i++)
         {
@@ -207,40 +211,42 @@ int main(int argc, char **argv)
         // {
         //     pageranks[i]=pageranks[i]/ans1;
         // }
-                MPI_Barrier(MPI_COMM_WORLD);
-        if(iter>max_iters)
-            break;
+                // MPI_Barrier(MPI_COMM_WORLD);
         iter++;
+        if(iter>=max_iters)
+            break;
+        
         delete mr;
 
 
     } 
   double tstop = MPI_Wtime();
-  if(me==0)
-  std::cout<<tstop-tstart<<std::endl;
+  // std::cout<<me<<" time "<<tstop-tstart<<std::endl;
 
-    MPI_Barrier(MPI_COMM_WORLD);
+    // MPI_Barrier(MPI_COMM_WORLD);
     MPI_Finalize();    
-    // if(me==0)
-    // {
-    //     // double ans1 = 0.0;
-    //     // for(int i=0; i<num_pages; i++)
-    //     // {
-    //     //     ans1 += pageranks[i];
-    //     // }
-    //     // for(int i=0; i<num_pages; i++)
-    //     // {
-    //     //     pageranks[i]=pageranks[i]/ans1;
-    //     // }
+    if(me==0)
+    {
+        // double ans1 = 0.0;
+        // for(int i=0; i<num_pages; i++)
+        // {
+        //     ans1 += pageranks[i];
+        // }
+        // for(int i=0; i<num_pages; i++)
+        // {
+        //     pageranks[i]=pageranks[i]/ans1;
+        // }
 
-    //     double ans = 0.0;
-    //     for(int i=0; i<num_pages; i++)
-    //     {
-    //         std::cout<<i<<" = "<<pageranks[i]<<std::endl;
-    //         ans =ans+ pageranks[i];
-    //     }
-    //     std::cout<<"sum "<<ans<<std::endl;
-    // }
+        double ans = 0.0;
+        for(int i=0; i<num_pages; i++)
+        {
+            // std::cout<<i<<" = "<<pageranks[i]<<std::endl;
+            ans =ans+ pageranks[i];
+        }
+        // std::cout<<"sum "<<ans<<std::endl;
+        std::cout<<filename<<"\t";
+        std::cout<<tstop-tstart<<"\n"; 
+    }
 
 
     return 0;

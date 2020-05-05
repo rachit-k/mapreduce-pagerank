@@ -15,7 +15,8 @@ declare -a StringArray=("test/barabasi-10000.txt"  "test/zachary.txt")
 touch outputs3.csv
 
 for val in ${StringArray[*]}; do
-	mpirun -np 2 pagerank $val 20 >> outputs3.csv
+	mpirun --oversubscribe -np 2 pagerank $val 20 >> outputs3.csv
+	mpirun -np 1 pagerank $val 20 >> outputs3.csv
 done
 
 #./output {<file_name>} {<number of max_iterations>}
