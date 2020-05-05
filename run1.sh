@@ -1,5 +1,6 @@
 make all
-declare -a StringArray=("test/barabasi-10000.txt" "test/barabasi-20000.txt" "test/barabasi-30000.txt" 
+# "test/barabasi-10000.txt"  "test/zachary.txt"
+declare -a StringArray=("test/barabasi-20000.txt" "test/barabasi-30000.txt" 
 	"test/barabasi-40000.txt" "test/barabasi-50000.txt" "test/barabasi-60000.txt" "test/barabasi-70000.txt" 
 	"test/barabasi-80000.txt" "test/barabasi-90000.txt" "test/barabasi-100000.txt" "test/bull.txt" 
 	"test/chvatal.txt" "test/coxeter.txt" "test/cubical.txt" "test/diamond.txt" "test/dodecahedral.txt" 
@@ -9,7 +10,7 @@ declare -a StringArray=("test/barabasi-10000.txt" "test/barabasi-20000.txt" "tes
  	"test/housex.txt" "test/icosahedral.txt" "test/krackhardt_kite.txt" "test/levi.txt" "test/mcgee.txt" "test/meredith.txt" 
  	"test/noperfectmatching.txt" "test/nonline.txt" "test/octahedral.txt" "test/petersen.txt" "test/robertson.txt"
 	"test/smallestcyclicgroup.txt" "test/tetrahedral.txt" "test/thomassen.txt" "test/tutte.txt" "test/uniquely3colorable.txt"
-	"test/walther.txt" "test/zachary.txt")
+	"test/walther.txt")
  
 touch outputs1.csv
 
