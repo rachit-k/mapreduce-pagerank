@@ -10,7 +10,7 @@ or
 ### Compile
 ```make mr-pr-mpi```
 ### Run
-```mpirun -np 2 part2```
+```./mr-pr-mpi.sh {<input_filename>} {<output_filename>}```
 
 ## Part3:
 ### Compile
