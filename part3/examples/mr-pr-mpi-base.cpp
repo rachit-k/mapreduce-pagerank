@@ -16,7 +16,6 @@ double *pageranks=NULL;
 int num_pages=0;
 
 
-
 // struct structformapper
 // {
 //     int key;

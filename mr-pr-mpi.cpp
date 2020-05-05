@@ -199,6 +199,7 @@ int main(int narg, char **args)
 
     ifstream fin;
     string filename;
+    string outfile=args[2];
     if(narg>1)
     {
         filename=args[1];
@@ -235,7 +236,7 @@ int main(int narg, char **args)
 
     MPI_Comm_rank(MPI_COMM_WORLD,&me);
     MPI_Comm_size(MPI_COMM_WORLD,&nprocs);
-
+    int max_iter=20;
     int iter=0;
     std::chrono::time_point<std::chrono::system_clock> start, end; 
     start = std::chrono::system_clock::now();
@@ -276,7 +277,7 @@ int main(int narg, char **args)
         //if(me==0)
         // cout<<"One iteration done "<<endl;
 
-        if(iter>=20)
+        if(iter>=max_iter)
             break;
         dprod=0;
         iter++;
@@ -290,14 +291,17 @@ int main(int narg, char **args)
    
     if(me==0)
     {
-     for(int i=0; i<num_pages; i++)
+        ofstream fout;
+        fout.open(outfile);
+        for(int i=0; i<num_pages; i++)
         {   sum=sum+pageranks[i];
-                // cout<<i<<" = "<<pageranks[i]<<endl;
+            fout<<i<<" = "<<pageranks[i]<<endl;
         }
-    // cout<<"Sum "<<sum<<endl;
+    fout<<"sum "<<sum<<endl;
+    fout.close();
     // std::cout<< "Parallel elapsed time: " << elapsed_seconds.count() << "s\n"; 
-    std::cout<<filename<<"\t";
-    std::cout<<elapsed_seconds.count()<<"\n"; 
+    // std::cout<<filename<<"\t";
+    // std::cout<<elapsed_seconds.count()<<"\n"; 
     }
     // cout<<"End for rank "<<me<<endl;
     MPI_Finalize();

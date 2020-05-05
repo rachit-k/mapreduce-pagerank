@@ -275,6 +275,9 @@ int main(int argc, char *argv[])
     if(argc>1){
         filename=argv[1];
     }
+
+    std::string outfile=argv[2];
+
     std::ifstream inFile;
     inFile.open(filename);
     std::vector<std::pair<int, int> > page_coordinates;
@@ -293,7 +296,7 @@ int main(int argc, char *argv[])
             max=temp;
         }
     }
-    std::cout<<filename<<"\t";
+    // std::cout<<filename<<"\t";
     unsigned long size=max+1;
     global_size=size;
     Ap_calc::size_graph=size;
@@ -321,9 +324,9 @@ int main(int argc, char *argv[])
     Ap_calc::calc_outedges();
     mask_nonoutgoing();
     int max_iterations=20;
-    if(argc>2){
-        max_iterations=atoi(argv[2]);
-    }
+    // if(argc>2){
+    //     max_iterations=atoi(argv[2]);
+    // }
     fraction=0.85;
     std::chrono::time_point<std::chrono::system_clock> start, end; 
     start = std::chrono::system_clock::now(); 
@@ -362,41 +365,51 @@ int main(int argc, char *argv[])
     end = std::chrono::system_clock::now(); 
     std::chrono::duration<double> elapsed_seconds = end - start; 
     // std::cout<< "Paralle elapsed time: " << elapsed_seconds.count() << "s\n"; 
-    std::cout<<elapsed_seconds.count() << "\t"; 
+    // std::cout<<elapsed_seconds.count() << "\t"; 
     // std::cout<<"After "<<num_iterations+1<<" number of iterations "<<std::endl;
-    for(unsigned i =0;i<size;++i){
-        probablity[i] = (double)1/size;
-
+    std::ofstream fout;
+    fout.open(outfile);
+    double ans=0.0;
+    for(unsigned i =0;i<size;++i)
+    {
+        fout<<i<<" = "<<probablity[i]<<std::endl;
+        ans=ans+probablity[i];
     }
-    num_iterations=0;
-    start = std::chrono::system_clock::now(); 
-    while(num_iterations<max_iterations){
-        Ap_calc::job::datasource_type datasource(size);
-        Ap_calc::job job(datasource, spec);
-        Dp_calc::job::datasource_type datasource_dp(size);
-        Dp_calc::job job_dp(datasource_dp, spec);
-        mapreduce::results result;
-        mapreduce::results result_dp;
-        job_dp.run<mapreduce::schedule_policy::sequential<Dp_calc::job> >(result_dp);
-        Ap_calc::dprod=job_dp.begin_results()->second/global_size;
+    fout<<"sum "<<ans<<std::endl;
+    fout.close();
+    // for(unsigned i =0;i<size;++i){
+    //     probablity[i] = (double)1/size;
 
-        job.run<mapreduce::schedule_policy::sequential<Ap_calc::job> >(result);
-        for (auto it=job.begin_results(); it!=job.end_results(); ++it)
-        {
-            probablity[it->first]=it->second;
-        }
+    // }
+    // num_iterations=0;
+    // start = std::chrono::system_clock::now(); 
+    // while(num_iterations<max_iterations){
+    //     Ap_calc::job::datasource_type datasource(size);
+    //     Ap_calc::job job(datasource, spec);
+    //     Dp_calc::job::datasource_type datasource_dp(size);
+    //     Dp_calc::job job_dp(datasource_dp, spec);
+    //     mapreduce::results result;
+    //     mapreduce::results result_dp;
+    //     job_dp.run<mapreduce::schedule_policy::sequential<Dp_calc::job> >(result_dp);
+    //     Ap_calc::dprod=job_dp.begin_results()->second/global_size;
+
+    //     job.run<mapreduce::schedule_policy::sequential<Ap_calc::job> >(result);
+    //     for (auto it=job.begin_results(); it!=job.end_results(); ++it)
+    //     {
+    //         probablity[it->first]=it->second;
+    //     }
         
-        // for(int i=0;i<global_size;++i){
-        //     probablity[i]=probablity[i]/norm;
-        // }
-        // std::cout<<"After "<<num_iterations+1<<" number of iterations "<<norm<<std::endl;
+    //     // for(int i=0;i<global_size;++i){
+    //     //     probablity[i]=probablity[i]/norm;
+    //     // }
+    //     // std::cout<<"After "<<num_iterations+1<<" number of iterations "<<norm<<std::endl;
         
-        num_iterations++;
-    }
-    end = std::chrono::system_clock::now(); 
-     elapsed_seconds = end - start; 
+    //     num_iterations++;
+    // }
+    // end = std::chrono::system_clock::now(); 
+    //  elapsed_seconds = end - start; 
     // std::cout<< "Serial elapsed time: " << elapsed_seconds.count() << "s\n"; 
-     std::cout<<elapsed_seconds.count() << "\n"; 
+     // std::cout<<elapsed_seconds.count() << "\n"; 
     return 0;
 }
 
