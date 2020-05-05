@@ -2,7 +2,7 @@ make all
 
 declare -a StringArray=("test/barabasi-10000.txt" "test/barabasi-20000.txt" "test/barabasi-30000.txt" 
 	"test/barabasi-40000.txt" "test/barabasi-50000.txt" "test/barabasi-60000.txt" "test/barabasi-70000.txt" 
-	"test/barabasi-80000.txt" "test/barabasi-90000.txt" "test/barabasi-10000.txt" "test/bull.txt" 
+	"test/barabasi-80000.txt" "test/barabasi-90000.txt" "test/barabasi-100000.txt" "test/bull.txt" 
 	"test/chvatal.txt" "test/coxeter.txt" "test/cubical.txt" "test/diamond.txt" "test/dodecahedral.txt" 
 	"test/erdos-10000.txt" "test/erdos-20000.txt" "test/erdos-30000.txt" "test/erdos-40000.txt" "test/erdos-50000.txt" 
 	"test/erdos-60000.txt" "test/erdos-70000.txt" "test/erdos-80000.txt" "test/erdos-90000.txt" "test/erdos-100000.txt"
