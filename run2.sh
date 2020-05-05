@@ -1,7 +1,7 @@
 make part2
 
 	# "test/barabasi-10000.txt" "test/zachary.txt"
-declare -a StringArray=("test/barabasi-20000.txt" "test/barabasi-30000.txt" 
+declare -a StringArray=( "test/barabasi-20000.txt" "test/barabasi-30000.txt" 
 	"test/barabasi-40000.txt" "test/barabasi-50000.txt" "test/barabasi-60000.txt" "test/barabasi-70000.txt" 
 	"test/barabasi-80000.txt" "test/barabasi-90000.txt" "test/barabasi-100000.txt" "test/bull.txt" 
 	"test/chvatal.txt" "test/coxeter.txt" "test/cubical.txt" "test/diamond.txt" "test/dodecahedral.txt" 

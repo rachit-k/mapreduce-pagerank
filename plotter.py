@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-data = pd.read_csv("outputs1.csv", header=None, sep='\t')
+data = pd.read_csv("outputs2.csv", header=None, sep='\t')
 print(data)
 flag=True
 data= data.iloc[:, 1:3]
