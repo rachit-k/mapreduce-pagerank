@@ -216,30 +216,31 @@ int main(int argc, char **argv)
 
     } 
   double tstop = MPI_Wtime();
-  std::cout<<me<<" time "<<tstop-tstart<<std::endl;
+  if(me==0)
+  std::cout<<tstop-tstart<<std::endl;
 
     MPI_Barrier(MPI_COMM_WORLD);
     MPI_Finalize();    
-    if(me==0)
-    {
-        // double ans1 = 0.0;
-        // for(int i=0; i<num_pages; i++)
-        // {
-        //     ans1 += pageranks[i];
-        // }
-        // for(int i=0; i<num_pages; i++)
-        // {
-        //     pageranks[i]=pageranks[i]/ans1;
-        // }
+    // if(me==0)
+    // {
+    //     // double ans1 = 0.0;
+    //     // for(int i=0; i<num_pages; i++)
+    //     // {
+    //     //     ans1 += pageranks[i];
+    //     // }
+    //     // for(int i=0; i<num_pages; i++)
+    //     // {
+    //     //     pageranks[i]=pageranks[i]/ans1;
+    //     // }
 
-        double ans = 0.0;
-        for(int i=0; i<num_pages; i++)
-        {
-            std::cout<<i<<" = "<<pageranks[i]<<std::endl;
-            ans =ans+ pageranks[i];
-        }
-        std::cout<<"sum "<<ans<<std::endl;
-    }
+    //     double ans = 0.0;
+    //     for(int i=0; i<num_pages; i++)
+    //     {
+    //         std::cout<<i<<" = "<<pageranks[i]<<std::endl;
+    //         ans =ans+ pageranks[i];
+    //     }
+    //     std::cout<<"sum "<<ans<<std::endl;
+    // }
 
 
     return 0;
