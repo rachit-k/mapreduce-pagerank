@@ -17,9 +17,10 @@ void mapper(MPI_Comm mpi_comm, long long nproc, long long rank, vector<double> p
 {
     long long batchsize = num_pages/(nproc);
     long long start=rank;
-    for(long long i=start*num_pages/nproc; i<(start+1)*num_pages/nproc; i++)
+    for(long long i=0; i<num_pages; i++)
     {
-        temppageranks[i].push_back(0.0);
+        if(i%nproc==rank)
+        {
       	long long n = outedges[i].size();
       	if(n!=0)
         {
@@ -41,6 +42,7 @@ void mapper(MPI_Comm mpi_comm, long long nproc, long long rank, vector<double> p
             double keyvaltemp[]={i*1.0, ((1-fraction)/num_pages)+ (fraction*dprod/num_pages)};
             MPI_Send(&keyvaltemp,2, MPI_DOUBLE, rank, 1, MPI_COMM_WORLD);
 
+        }
         }
 
 
@@ -294,7 +296,7 @@ int main(int narg, char **args)
     cout<<"Sum "<<sum<<endl;
     std::cout<< "Paralle elapsed time: " << elapsed_seconds.count() << "s\n"; 
     }
-    cout<<"End for rank "<<me<<endl;
+    // cout<<"End for rank "<<me<<endl;
     MPI_Finalize();
     return 0;
 }
